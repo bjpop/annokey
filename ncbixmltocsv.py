@@ -1,6 +1,4 @@
 #!/bin/env python 
-# this is a test comment.
-# this is another test comment.
 
 import lxml.etree as ET
 import sys
