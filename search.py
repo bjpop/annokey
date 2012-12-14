@@ -118,7 +118,7 @@ def search_genes_xml(genes, keywords, xmlfile):
              if gene['Func'] == 'intergenic':
                  continue
              else: 
-                 dbEntry =   # parsing xml 
+                 dbEntry = get_geneContent(geneEntry) 
                  searchResult = search_keywords(geneContent, keywords)
                 
         # clear unneeded node references
@@ -262,14 +262,14 @@ def main():
                 pickle.dump(fetchResults, file)
 
         # searche keywords
-        search_genes_xml(genes, keywords, fetchResults)
+        #search_genes_xml(genes, keywords, fetchResults)
     elif args.loadCache != None:
         # get gene information from cache
         try:
             cache = open(args.loadCache, 'r')
             fetchResults = pickle.load(cache)
             
-            search_genes_xml(genes, keywords, fetchResults)
+            #search_genes_xml(genes, keywords, fetchResults)
         except:
             print 'Invalid cache file'
 
