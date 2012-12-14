@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 import re
 import pickle
 from Bio import Entrez
-from lxml import entree
+from lxml import etree
 
 '''
 Version modified from previous to accept Entrez_parser.py parsed xml file such as resulting from Homo_sapiens.xml. Accepts this output file, searchKeys and genes in tsv format. Works offline so that any number of variants can be tested.
