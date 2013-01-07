@@ -58,8 +58,8 @@ Options
 
 
 
-Result
-	Two files would be stored after executing this script. If either --downloadonly or --convertonly is passed, only one of the two file would be stored.
+Output
+	Two files would be stored when the program is finished successfully. If either --downloadonly or --convertonly is passed, only one of the two file would be stored.
 
 1.	{gene databse name}_{last modifited time}.ags.gz 
 2.	{gene databse name}_{last modified time}.xgs
