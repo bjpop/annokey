@@ -166,7 +166,7 @@ def main():
                 ftp.sendcmd('TYPE i')
                 dataSize = ftp.size(dataFilePath)
                 dataSize = float(dataSize)
-                print_verbose(30, '  >> The file size is %.2fM' % (dataSize/(1024**2)))
+                print_verbose(60, '  >> The file size is %.2fM' % (dataSize/(1024**2)))
                 ns = Namespace()
                 ns.downloadedSize = 0
                 with open(storeFile, 'wb') as f:
