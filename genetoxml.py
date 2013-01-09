@@ -21,6 +21,7 @@ verboseLevel = 2
 
 
 class MDTMError(Exception):
+    '''Errors occur while getting the last modified time from server.'''
 
     def __init__(self, value):
         self.value = value
@@ -30,6 +31,7 @@ class MDTMError(Exception):
 
 
 class GeneToXmlError(Exception):
+    '''Errors occur while converting gene databse to xml.'''
 
     def __init__(self, value):
         self.value = value
@@ -55,7 +57,7 @@ def flush_verbose(level, message):
         sys.stdout.flush()
 
 
-def getProgramPath(arg):
+def get_program_path(arg):
 
     gene2xml = None
     if arg is not None:
@@ -78,7 +80,7 @@ def getProgramPath(arg):
 # The path of the linux.gene2xml should be passed as an argument.
 # It should be ether the full path or linux.gene2xml if PATH has its path.
 
-def convertGenetoXml(program, infile):
+def convert_genetoxml(program, infile):
     # the outfile has the same file name with the input file
     # but having xml extension.
     extension = infile.rfind('.ags')
@@ -133,12 +135,12 @@ def convertGenetoXml(program, infile):
         return outfile
 
 # Ftp class supports
-# connect(), disconnect(), download(), getLastModifiedTime(), and getSize().
+# connect(), disconnect(), download(), get_last_modified_time(), and getSize().
 # When operation finished, disconnect() should be called.
 
 
 class Ftp(object):
-
+  
     def __init__(self, ftpsite):
         self.site = ftpsite
         self.ftp = None
@@ -172,7 +174,7 @@ class Ftp(object):
         finally:
             return self.ftp
 
-    def getLastModifiedTime(self, filepath):
+    def get_last_modified_time(self, filepath):
         # get the last modified time of server data
         # the return value would be '213 20120101051112'
         if self.ftp is None:
@@ -209,7 +211,7 @@ class Ftp(object):
         finally:
             return mdServer
 
-    def getSize(self, filepath):
+    def get_size(self, filepath):
         if self.ftp is None:
             print_verbose(0, '[Error] ftp servier is not connected.')
             return
@@ -344,7 +346,7 @@ def main():
                          'can be used at once')
         return
     # check the linux.gene2xml path
-    gene2xml = getProgramPath(args.gene2xmlpath)
+    gene2xml = get_program_path(args.gene2xmlpath)
     if gene2xml is None:
         print_verbose(0, '[Error] The program path %s does not exist.' %
                          args.gene2xmlpath)
@@ -374,7 +376,7 @@ def main():
         # check the last modifited time of the file,
         # if option --force is not give
         uptodatefile = True
-        mdServer = ftp.getLastModifiedTime(dataFilePath)
+        mdServer = ftp.get_last_modified_time(dataFilePath)
         if mdServer is None:
             ftp.disconnect()
             return
@@ -421,7 +423,7 @@ def main():
     # convert the file to xml using linux.gene2xml
     # if --downloadonly option is give, converting would not be executed.
     if not args.downloadonly:
-        outfile = convertGenetoXml(gene2xml, storefile)
+        outfile = convert_genetoxml(gene2xml, storefile)
         if outfile is None:
             return
 
