@@ -73,6 +73,7 @@ def convert_genetoxml(program, infile, outfile):
             return repr(self.value)
 
     print_verbose(1, 'Starts converting %s to %s.' % (infile, outfile))
+    print_verbose(2, '  >> Converting ...')
     try:
         ret = subprocess.check_output([program, '-i', infile,
                                        '-o', outfile, '-b', '-c'],
@@ -99,9 +100,9 @@ def convert_genetoxml(program, infile, outfile):
         outfile = None
         if e.errno == 2:  # linux.gene2xml is not in PATH
             print_verbose(0, '[Error] '
-                             'Could not execute the program linux.gene2xml, '
-                             'perhaps it is not installed in your PATH? '
-                             'Please add the program path to PATH or '
+                             'Could not execute the program linux.gene2xml.'
+                             '\n        Perhaps it is not installed in your PATH? '
+                             '\n        Please add the program path to PATH or '
                              'use --gene2xmlpath option.')
         else:
             print_verbose(0, 'Undefined error occurs while '
@@ -254,7 +255,7 @@ class Ftp(object):
                 flush_verbose(2, '  >> Downloading...               ')
                 self.ftp.retrbinary('RETR %s' % filepath, callback)
 
-            print_verbose(2, '  \n>> Downloading data is successful.')
+            print_verbose(2, '\n  >> Downloading data is successful.')
             print_verbose(2, '  >> %s is stored.' % storefile)
 
         except (IOError, ftplib.all_errors) as e:
@@ -418,7 +419,7 @@ def main():
     # but linux.gene2xml is not in the given path, finish the program.
     gene2xml = get_program_path(args.gene2xmlpath)
     if gene2xml is None:
-        print_verbose(0, '[Error] The program path %s does not exist.' %
+        print_verbose(0, '[Error] Could not find linux.gene2xml in %s' %
                          args.gene2xmlpath)
         return
     # Determine the ftp server.
