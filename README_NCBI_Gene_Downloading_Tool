@@ -2,9 +2,9 @@ NCBI Gene Downloading Tool
 
 This program downloads gene data from the ftp server and 
 converting data to xml file by using linux.gene2xml tool.
-This program checks the last modified time of the databse in the server,
+This program checks the last modified time of the database in the server,
 when it tries to download the gene database from the server. 
-If the same version of database is in the local directory alreay, 
+If the same version of database is in the local directory already, 
 this program does not download the database from server. 
 If you want to download the database anyway, please use the --force option. 
 If you already have the database file that you need to look up and 
@@ -13,7 +13,7 @@ want to convert the file, please use the --convertonly option.
 The ftp site to be connected and the gene database to be downloaded are 
 determined by the option arguments passed. The default values are
  - ftp site: NCBI ftp server (ftp.ncbi.nlm.nih.gov)
- - gene databse: Homo sapiens 
+ - gene database: Homo sapiens 
                  (/gene/DATA/ASN_BINARY/Mammalia/Homo_sapiens.ags.gz)
 
 Downloading gene file:
@@ -30,7 +30,7 @@ your PATH has the relevant path of linux.gene2xml. If your PATH does not have,
 you should pass the option argument (--gene2xmlpath) to inform where 
 linux.gene2xml is. For example, if linux.gene2xml is located at 
 /usr/local/gene2xml/1.3/bin/linux.gene2xml and PATH does not have it, 
-the arguement should be 
+the argument should be 
 --gene2xmlpath=/usr/local/gene2xml/1.3/bin/linux.gene2xml or 
 --gene2xmlpath=/usr/local/gene2xml/1.3/bin
 
@@ -85,13 +85,13 @@ Options
            3  |     o      |       o      |       o       |     o
          --------------------------------------------------------------
          e.g) --verbose=2
-         Starts conneting to server (ftp.ncbi.nlm.nih.gov).
+         Starts connecting to server (ftp.ncbi.nlm.nih.gov).
            >> Connecting to server is successful.
          Starts getting the last modified time of data.
            >> Getting the last modified time of data is successful.
            >> The last modified time of the data at the server is 
               20130106185643
-         Starts downoloading data from server.
+         Starts downloading data from server.
            >> The file size is 135M
            >> Downloading...         10.34% 
           
@@ -104,7 +104,7 @@ Options
                     ftp site. For example, if you want to download gene 
                     database of Archaea from NCBI FTP site, you should pass 
                     /gene/DATA/ASN_BINARY/Archaea_Bacteria/Archaea.ags.gz as 
-                    an arugment value. Default is Homo spiens 
+                    an argument value. Default is Homo sapiens 
                     (/gene/DATA/ASN_BINARY/Mammalia/Homo_sapiens.ags.gz)
          e.g) --filepath=/gene/DATA/ASN_BINARY/Mammalia/Bos_taurus.ags.gz
        
@@ -135,8 +135,8 @@ Output
         If either --downloadonly or --convertonly is passed, only one of the
         two file would be stored.
 
-        1. {gene databse name}_{last modifited time}.ags.gz 
-        2. {gene databse name}_{last modified time}.xml
+        1. {gene database name}_{last modified time}.ags.gz 
+        2. {gene database name}_{last modified time}.xml
 
         The format of last modified time is yyyymmddhhmmss. Note that the last
         modified time is the server’s time.

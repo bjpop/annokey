@@ -1,12 +1,12 @@
 #!/bin/env python
 
-'''NCBI Gene Downlading Tool
+'''NCBI Gene Downloading Tool
 
 This program downloads gene data from the ftp server and \
 converting data to xml file by using linux.gene2xml tool.
-This program checks the last modified time of the databse in the server, \
+This program checks the last modified time of the database in the server, \
 when it tries to download the gene database from the server. \
-If the same version of database is in the local directory alreay, \
+If the same version of database is in the local directory already, \
 this program does not download the database from server. \
 If you want to download the database anyway, please use the --force option. \
 If you already have the database file that you need to look up and \
@@ -130,7 +130,7 @@ class Ftp(object):
     def connect(self):
         # Connect FTP site and login.
         if self.ftp is not None:
-            print_verbose(0, '[Error] ftp connection is already estabished.')
+            print_verbose(0, '[Error] ftp connection is already established.')
             return
 
         try:
@@ -161,7 +161,7 @@ class Ftp(object):
         # The server gives the result code and the value.
         # e.g) '213 20120101051112'
         if self.ftp is None:
-            print_verbose(0, '[Error] ftp servier is not connected.')
+            print_verbose(0, '[Error] ftp server is not connected.')
             return
 
         class MDTMError(Exception):
@@ -203,7 +203,7 @@ class Ftp(object):
     def get_size(self, filepath):
         '''Get the size of the file on the server.'''
         if self.ftp is None:
-            print_verbose(0, '[Error] ftp servier is not connected.')
+            print_verbose(0, '[Error] ftp server is not connected.')
             return
 
         dataSize = None
@@ -234,7 +234,7 @@ class Ftp(object):
             return
 
         storefile = outfilename
-        print_verbose(1, 'Starts downoloading data from server.')
+        print_verbose(1, 'Starts downloading data from server.')
 
         try:
             # Get data size for progressbar
@@ -287,16 +287,16 @@ class Ftp(object):
         if self.ftp is not None:
             try:
                 self.ftp.quit()
-            # ftplib exception is always occured when
+            # ftplib exception always occurs when
             # try to quit while downloading a file.
             # In this program, it always happens when
-            # KeyboardInterrupt is occured while downloading.
+            # KeyboardInterrupt occurs while downloading.
             # As this exception is not the exceptions that should be handled,
             # ignore the exceptions.
             except ftplib.all_errors as e:
                 pass
                 #print_verbose(3, 'Error occurs while '
-                #                 'quiting ftp connection.')
+                #                 'quitting ftp connection.')
                 #print_verbose(3, '  [Error Log] ' + str(e))
             except KeyboardInterrupt:
                 pass
@@ -316,11 +316,11 @@ def parse_args():
                      'the ftp server and converting data to '
                      'xml file by using linux.gene2xml tool. '
                      'This program checks the last modified time '
-                     'of the databse in the server, '
+                     'of the database in the server, '
                      'when it tries to download the gene database '
                      'from the server. '
                      'If the same version of database is in '
-                     'the local directory alreay, '
+                     'the local directory already, '
                      'this program does not download the database '
                      'from server. '
                      'If you want to download the database anyway, '
@@ -353,8 +353,8 @@ def parse_args():
                               'if you want to download gene database of '
                               'Archaea from NCBI FTP site, you should pass '
                               '/gene/DATA/ASN_BINARY/Archaea_Bacteria/'
-                              'Archaea.ags.gz as an arugment value. '
-                              'Default is Homo spiens '
+                              'Archaea.ags.gz as an argument value. '
+                              'Default is Homo sapiens '
                               '(/gene/DATA/ASN_BINARY/Mammalia/'
                               'Homo_sapiens.ags.gz)'))
 
@@ -445,7 +445,7 @@ def main():
         if ftp.connect() is None:
             return
 
-        # Check the last modifited time of the file.
+        # Check the last modified time of the file.
         isUptodateAgs = True
         mdServer = ftp.get_last_modified_time(dataFilepath)
         if mdServer is None:
@@ -487,7 +487,7 @@ def main():
         isUptodateXml = os.path.exists(uptodateXmlfile)
 
         # If option force is on or
-        # if the local directory have not the latest version of the databse,
+        # if the local directory have not the latest version of the database,
         # download the database from the server.
         # Otherwise, check whether corresponding xml file exists or not.
         # If the xml file is in the directory,
