@@ -99,11 +99,13 @@ def convert_genetoxml(program, infile, outfile):
             os.remove(outfile)
         outfile = None
         if e.errno == 2:  # linux.gene2xml is not in PATH
-            print_verbose(0, '[Error] '
-                             'Could not execute the program linux.gene2xml.'
-                             '\n        Perhaps it is not installed in your PATH? '
-                             '\n        Please add the program path to PATH or '
-                             'use --gene2xmlpath option.')
+            print_verbose(
+                0,
+                '[Error] '
+                'Could not execute the program linux.gene2xml.'
+                '\n        Perhaps it is not installed in your PATH? '
+                '\n        Please add the program path to PATH or '
+                'use --gene2xmlpath option.')
         else:
             print_verbose(0, 'Undefined error occurs while '
                              'converting data to xml.')
