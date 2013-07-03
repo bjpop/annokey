@@ -3,8 +3,8 @@
 '''
 --------------------------------------------------------------------------------
 
-NCBI Gene Search Tool
----------------------
+Annokey: a NCBI Gene Database Keyword Search Tool
+-------------------------------------------------
 
 Authors:   Daniel Park, Sori Kang, Bernie Pope, Tu Nguyen-Dumont.
 Copyright: 2013
@@ -19,9 +19,8 @@ If the option --online is on, this program downloads gene database in xml
 format from the NCBI server and search keywords. The option --saveCache allows
 the downloaded information to be saved int the user's directory.
 
-For offline search, there are two options. --loadCache and --geneDb.
---loadCache accepts a xml file for gene information, while --geneDb accepts
-a tab separated file that containing gene information.
+For offline search, there is the option --loadCache, which
+accepts an xml file for gene information. 
 
 The search results are appended at the end of column of the
 input gene file with the information about the keyword hit,
@@ -29,7 +28,7 @@ the keyword rank, and the section where the keyword hit.
 
 Required inputs:
 
-    --searchKeys FILENAME   a text file of search keywords/keyphrases. One
+    --keys FILENAME   a text file of search keywords/keyphrases. One
                             term per line.
 
     --genes FILENAME        a text file of gene information, one gene per line.
@@ -49,11 +48,7 @@ from lxml import etree
 from StringIO import StringIO
 import itertools
 import cPickle as pickle
-
-# for Entrez
-# XXX Have to consider registering tool and email.
-# XXX this should be a parameter.
-Entrez.email = "bjpop@.unimelb.edu.au"
+import logging
 
 #NCBI access rate limit
 #http://www.ncbi.nlm.nih.gov/books/NBK25497/
@@ -85,135 +80,59 @@ Entrez.email = "bjpop@.unimelb.edu.au"
 #developers may register values of tool and email at any time, and are
 #encouraged to do so.
 
-# The column positions of gene name and func.
-# XXX can we get rid of these?
-gene_name_pos = None
-func_pos = None
-has_column_headers = None
 
-def set_column_options(args):
-    '''Find the column index containing gene name or func.
-       If both xxCol and xxColPos are presented, then use xxxCol.
-    '''
-    global gene_name_pos, gene_func_pos, has_column_headers
-    # We assume that if xxColPos is presented,
-    # the file does not have a column headers.
-    # XXX is this assumption reasonable?
-    if args.geneNameColPos and args.geneFuncColPos:
-        has_column_headers = False
-        gene_name_pos = args.geneNameColPos
-        gene_func_pos = args.geneFuncColPos
+def genefile_reader(csvfile):
+    # try to detect the csv format from the (up to)
+    # first three lines of the file
+    sample = ''
+    for n, line in enumerate(csvfile):
+        if n >= 3:
+            break
+        else:
+            sample += line 
+    sniffer = csv.Sniffer()
+    dialect = sniffer.sniff(sample)
+    csvfile.seek(0)
+    reader = csv.reader(csvfile, dialect)
+    if sniffer.has_header:
+        header = next(reader)
     else:
-        has_column_headers = True
-        with open(args.genes, 'rb') as file:
-            genefile = csv.reader(file, delimiter='\t')
-            column_headers = genefile.next()
-            name_column = args.geneNameCol if args.geneNameCol else 'Gene'
-            func_column = args.geneFuncCol if args.geneFuncCol else 'Func'
-            try:
-                if args.geneNameColPos:
-                    gene_name_pos = args.geneNameColPos
-                else:
-                    gene_name_pos = column_headers.index(name_column)
-            except ValueError:
-                print '* Error * '
-                print 'Could not find column for gene name (%s).' % name_column
-                print 'Column header for gene name should be Gene.'
-                print 'Or use --geneNameCol or --geneNameColPos options.'
-                return False
-
-            try:
-                if args.geneFuncColPos:
-                    gene_func_pos = args.geneFuncColPos
-                else:
-                    gene_func_pos = column_headers.index(func_column)
-            except ValueError:
-                print '* Error *'
-                print 'Could not find column for func (%s).' % func_column
-                print 'Column header for gene func should be Func.'
-                print 'Or use --geneFuncCol or --geneFuncColPos options.'
-                return False
-    return True
+        header = None
+    return header, reader, dialect
 
 
-def get_column_headers(genefileName):
-    '''Read column headers if the file has it'''
-    if has_column_headers:
-        with open(genefileName, 'rb') as file:
-            genefile = csv.reader(file, delimiter='\t')
-            return genefile.next()
+# read each gene name from the gene file at a given column
+def get_gene_names(genefilename, column):
+    with open(genefilename, 'rb') as file:
+        header, reader, dialect = genefile_reader(file)
+        for row in reader:
+            name = row[column]
+            yield name
 
 
-def read_gene_file(genefileName, padding=False):
-    '''Read gene file and return generator.'''
+def get_gene_ids(genefilename, column, organism='Homo sapiens'):
 
-    max_column_length = 0
-    if padding:
-        # Find the maximum column length
-        with open(genefileName, 'rb') as file:
-            genefile = csv.reader(file, delimiter='\t')
-            for line in genefile:
-                if len(line) > max_column_length:
-                    max_column_length = len(line)
-
-    with open(genefileName, 'rb') as file:
-        genefile = csv.reader(file, delimiter='\t')
-        if has_column_headers:
-            genefile.next()
-        for line in genefile:
-            # gene name including (,;
-            # If '(' included, then use the gene name before '('
-            # XXX If ';' included, then use the first gene name.
-            # Need to consider use both(first and second)  gene names.
-            # http://www.openbioinformatics.org/annovar/annovar_gene.html
-            func = line[gene_func_pos].strip()
-            name = line[gene_name_pos].strip()
-            if func == 'splicing':
-                pa_pos = name.find('(')
-                if pa_pos != -1:
-                    name = name.split('(')[0]
-            if func == 'exonic;splicing':
-                se_pos = name.find(';')
-                if se_pos != -1:
-                    name = name.split(';')[0]
-            if padding:
-                num_to_add = max_column_length - len(line)
-                line.extend(['' for i in range(num_to_add)])
-            yield name, func, line
-
-
-def get_geneIds(genefilename):
-    '''Get gene Ids through NCBI search query.'''
-
-    def get_gene_names(genefilename, count):
+    def chunk_gene_names(genefilename, chunk_size):
         names = []
-        for n, (name, func, info) in enumerate(read_gene_file(genefilename)):
+        numbered_gene_names = enumerate(get_gene_names(genefilename, column))
+        for n, name in numbered_gene_names:
             names.append(name)
-            if (n+1) % count == 0:
+            if (n+1) % chunk_size == 0:
                 yield names
                 names = []
         yield names
 
     # Send request to server for every 100 genes.
-    geneIds = []
-    for names in get_gene_names(genefilename, 100):
+    gene_ids = set()
+
+    for names in chunk_gene_names(genefilename, chunk_size=100):
         terms = ' OR '.join(['%s[sym]' % name for name in names])
-        search_term = 'Homo sapiens[organism] AND (%s)' % terms
-        request = Entrez.esearch(db='gene',
-                                 term=search_term,
-                                 retmax=10000)
+        search_term = '{0}[organism] AND ({1})'.format(organism, terms)
+        request = Entrez.esearch(db='gene', term=search_term, retmax=10000)
         result = Entrez.read(request)
-        geneIds.extend(result['IdList'])
+        gene_ids.update(result['IdList'])
 
-    geneIds = make_unique_list(geneIds)
-    return geneIds
-
-
-def make_unique_list(list):
-    item_seen = {}
-    for i in list:
-        item_seen[i] = 1
-    return item_seen.keys()
+    return gene_ids
 
 
 def lookup_pubmed_ids(ids):
@@ -280,114 +199,23 @@ def lookup_pubmed_cache(id):
     else:
         return None
 
-def fetch_and_save(db, ids, filename):
-    '''Fetch using Entrez'''
+# assume input is a set
+def fetch_records_from_ids(ids):
+
+    db = 'gene'
+
     # Before posting, make a list of unique Ids
-    uniqIds = make_unique_list(ids)
-    idString = ','.join(uniqIds)
+    #uniqIds = make_unique_list(ids)
+    idString = ','.join(list(ids))
     postRequest = Entrez.epost(db=db, id=idString)
     postResult = Entrez.read(postRequest)
-
     webEnv = postResult['WebEnv']
     queryKey = postResult['QueryKey']
     fetchRequest = Entrez.efetch(db=db,
                                  webenv=webEnv,
                                  query_key=queryKey,
                                  retmode='xml')
-    fetchResults = fetchRequest.read()
-    try:
-        with open(filename, 'w') as file:
-            file.write(fetchResults)
-    except (KeyboardInterrupt, IOError):
-        if os.path.exists(filename):
-            os.remove(filename)
-            raise
-    return filename
-
-# What to be saved is
-# <PubmedArticle
-#              <MedlineCitation
-#                              <PMID
-#                              <Article
-#                                      <Journal
-#                                              <JournalIssue
-#                                                           <Volume
-#                                                           <Issue
-#                                                           <PubDate
-#                                                                   <Year
-#                                              <Title
-#                                     <ArticleTitle
-#                                     <Pagination
-#                                                <MedlinePgn
-#                                     <Abstract
-#                                              <AbstractText
-#                                               Label='BACKGROUND'
-#                                              <AbstractText
-#                                               Label='MATERIAL AND METHODS'
-#                                              <AbstractText
-#                                               Label='RESULTS'
-#                                              <AbstractText
-#                                               Label='CONCLUSION'
-#
-
-
-def get_pubmed_content(pubmedEntry):
-    '''Parse element PubmedArticle'''
-    pubmedContent = {}
-    for elem in pubmedEntry.iterchildren():
-        if elem.tag == 'MedlineCitation':
-            pmid = elem.find('.//PMID')
-            if pmid is not None and pmid.text is not None:
-                pubmedContent['PMID'] = pmid.text
-            article = elem.find('.//Article')
-            if article is not None:
-                journal = elem.find('.//Journal')
-                articleTitle = elem.find('.//ArticleTitle')
-                pagination = elem.find('.//Pagination')
-                abstract = elem.find('.//Abstract')
-            if journal is not None:
-                volume = journal.find('.//JournalIssue/Volume')
-                issue = journal.find('.//JournalIssue/Issue')
-                pubdate = journal.find('.//JournalIssue/PubDate/Year')
-                journalTitle = journal.find('.//Title')
-            if volume is not None and volume.text is not None:
-                pubmedContent['Volume'] = volume.text
-            if issue is not None and issue.text is not None:
-                pubmedContent['Issue'] = issue.text
-            if pubdate is not None and pubdate.text is not None:
-                pubmedContent['Year'] = pubdate.text
-            if journalTitle is not None and journalTitle.text is not None:
-                pubmedContent['Journal Title'] = journalTitle.text
-            if articleTitle is not None and articleTitle.text is not None:
-                pubmedContent['Article Title'] = articleTitle.text
-            if pagination is not None and pagination.text is not None:
-                pgn = pagination.find('.//MedlinePgn')
-                if pgn is not None and pgn.text is not None:
-                    pubmedContent['Pagination'] = pgn.text
-            if abstract is not None:
-                abstractText = ''
-                for abstractChild in abstract.iterchildren():
-                    if abstractChild.tag == 'AbstractText':
-                        if abstractChild.text is not None:
-                            abstractText += abstractChild.text
-                pubmedContent['Abstract'] = abstractText
-    return pubmedContent
-
-# XXX need to update
-# gene Id = 'Entrezgene_track-info/Gene-track/Gene-track_geneid'
-# gene name = 'Entrezgene_gene/Gene-ref/Gene-ref_locus'
-# gene synonyms = 'Entrezgene_gene/Gene-ref/Gene-ref_syn'
-# gene name(description) = 'Entrezgene_gene/Gene-ref/Gene-ref_desc'
-# gene alter name = 'Entrezgene_prot/Prot-ref/Prot-ref_name'
-# summary = 'Entrezgene_summary'
-# gene RIFs = 'Entrezgene_comments', key==Gene-commentary_text
-# function
-# component
-# process
-# pathway = 'Entrezgene_comments/Gene-commentary_comment/Gene-commentary_text'
-# interaction
-# conserved
-# PubMed Id
+    return fetchRequest.read()
 
 
 def merge_geneContent(geneContent, values):
@@ -407,543 +235,261 @@ def merge_geneContent(geneContent, values):
     return geneContent
 
 
-def get_geneName(geneEntry):
-    name = geneEntry.find('.//Entrezgene_gene/Gene-ref/Gene-ref_locus')
-    if name is not None and name.text is not None:
-        return name.text
+class Hit(object):
+    def __init__(self, keyword, rank, database_record_id, fields):
+        self.keyword = keyword # string
+        self.rank = rank # int
+        self.fields = fields # [string]
+        self.database_record_id = database_record_id # int
+
+    def __str__(self):
+        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
+
+def search_keywords(args):
+
+    # build a list of all the keywords in the order that they
+    # appear in the keywords file
+    keywords = []
+    with open(args.keys) as keysfile:
+        for line in keysfile:
+            keywords.append(line.strip())
+
+    if len(keywords) > 0:
+        with open(args.genes) as genesfile:
+            header, reader, dialect = genefile_reader(genesfile)
+            writer = csv.writer(sys.stdout, dialect=dialect)
+            if header:
+                writer.writerow(header)
+            # for each row in the genes file, find hits for the gene
+            # print the row out with the hits annoated on the end
+            for row in reader:
+                genename = row[args.genecol]
+                for hit in search_keywords_gene_iter(args, genename, keywords):
+                    row.append(str(hit))
+                writer.writerow(row)
 
 
-def get_otherSourceAnchor(entry):
-    '''Find the element 'Other-source_anchor',
-       and return the list of achor.
-    '''
-    result = []
-    for child in entry.iterchildren():
-        source = child.find('.//Gene-commentary_source')
-        if source is not None:
-            for othersource in source.iterchildren():
-                if othersource.tag == 'Other-source':
-                    anchor = othersource.find('.//Other-source_anchor')
-                    if anchor is not None and anchor.text is not None:
-                        result.append(anchor.text)
+# Search for each keyword in the XML file for a gene. A hit is yielded for
+# each keyword. If a gene has multiple files, we search each one separately.
+# This means it is possible to get multiple hits for the same keyword
+# but from different files. XXX we should annotate each hit with the database
+# file ID
+def search_keywords_gene_iter(args, gene_name, keywords):
+    for gene_xml in lookup_gene_cache_iter(args, gene_name):
+        yield Hit('some_keyword', 12, 12345, ['this', 'that', 'other'])
 
-    return result
-
-
-def parse_geneCommentary(commentary):
-    '''Parse element 'Gene-commentary'''
-
-    retValues = []
-
-    rifs = []
-    pathways = []
-    pmids = []
-    interactions = []
-    conserved = []
-    functions = []
-    components = []
-    processes = []
-
-    type = ''
-    heading = ''
-    label = ''
-
-    for item in commentary.iterchildren():
-        if item.tag == 'Gene-commentary_type':
-            type = item.attrib['value']
-
-        if item.tag == 'Gene-commentary_heading':
-            heading = item.text
-
-        if item.tag == 'Gene-commentary_label':
-            label = item.text
-
-        if item.tag == 'Gene-commentary_text':
-            if type == 'generif' and item.text is not None:
-                rifs.append(item.text)
-                retValues.append(('GeneRIFs', rifs))
-
-        if item.tag == 'Gene-commentary_refs':
-            for pub in item.iterchildren():
-                pubMedId = pub.find('.//Pub_pmid/PubMedId')
-                if pubMedId is not None and pubMedId.text is not None:
-                    pmids.append(pubMedId.text)
-            retValues.append(('PmIds', pmids))
-
-        if item.tag == 'Gene-commentary_products':
-            for child in item.iterchildren():
-                retValues += parse_geneCommentary(child)
-
-        if item.tag == 'Gene-commentary_comment':
-            if heading == 'Pathways':
-                for child in item.iterchildren():
-                    pathway = child.find('.//Gene-commentary_text')
-                    if pathway is not None and pathway.text is not None:
-                        pathways.append(pathway.text)
-                retValues.append(('Pathways', pathways))
-
-            elif heading == 'Interactions':
-                interactions = []
-                for child in item.iterchildren():
-                    subComment = item.find('.//Gene-commentary_comment')
-                    for grandChild in child.iterchildren():
-                        interactions += get_otherSourceAnchor(grandChild)
-                retValues.append(('Interactions', interactions))
-
-            elif heading == 'NCBI Reference Sequences (RefSeq)':
-                for child in item.iterchildren():
-                    retValues += parse_geneCommentary(child)
-
-            elif heading == 'Conserved Domains':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Conserved Domains', result))
-
-            elif label == 'Function':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Function', result))
-
-            elif label == 'Component':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Component', result))
-
-            elif label == 'Process':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Process', result))
-
-            else:
-                # Find 'Conserved Domains'
-                for child in item.iterchildren():
-                    if child.tag == 'Gene-commentary':
-                        heading = child.find('.//Gene-commentary_heading')
-                        if (heading is not None and
-                                heading.text == 'Conserved Domains'):
-                            retValues += parse_geneCommentary(child)
-
-    return retValues
-
-
-def get_geneContent(geneEntry):
-    '''Parse element Entrezgene.'''
-
-    geneContent = {'Gene Name': [],
-                   'Description': [],
-                   'Synonyms': [],
-                   'Alternative Name': [],
-                   'Summary': [],
-                   'GeneRIFs': [],
-                   'PmIds': [],
-                   'Pathways': [],
-                   'Interactions': [],
-                   'Conserved Domains': [],
-                   'Function': [],
-                   'Component': [],
-                   'Process': []}
-
-    for elem in geneEntry.iterchildren():
-
-        if elem.tag == 'Entrezgene_track-info':
-            status = elem.find('.//Gene-track/Gene-track_status')
-            if (status is not None and
-                    status.attrib['value'] == 'discontinued'):
-                continue
-
-        elif elem.tag == 'Entrezgene_gene':
-            ref = elem.find('.//Gene-ref')
-            name = ref.find('.//Gene-ref_locus')
-            desc = ref.find('.//Gene-ref_desc')
-            syn = ref.find('.//Gene-ref_syn')
-            if name is not None and name.text is not None:
-                geneContent['Gene Name'].append(name.text)
-            if desc is not None and desc.text is not None:
-                geneContent['Description'].append(desc.text)
-            if syn is not None:
-                for child in syn.iterchildren():
-                    if (child.tag == 'Gene-ref_syn_E' and
-                            child.text is not None):
-                        geneContent['Synonyms'].append(child.text)
-
-        elif elem.tag == 'Entrezgene_summary' and elem.text is not None:
-            geneContent['Summary'].append(elem.text)
-
-        elif elem.tag == 'Entrezgene_comments':
-            for subElem in elem.iterchildren():
-                result = parse_geneCommentary(subElem)
-                geneContent = merge_geneContent(geneContent, result)
-
-        elif elem.tag == 'Entrezgene_properties':
-            entry = elem.find('.//Gene-commentary/Gene-commentary_comment')
-            if entry is not None:
-                for child in entry.iterchildren():
-                    result = parse_geneCommentary(child)
-                    geneContent = merge_geneContent(geneContent, result)
-
-        elif elem.tag == 'Entrezgene_prot':
-            alterName = elem.find('.//Prot-ref/Prot-ref_name')
-            if alterName is not None:
-                for name in alterName.iterchildren():
-                    if (name.tag == 'Prot-ref_name_E' and
-                            name.text is not None):
-                        geneContent['Alternative Name'].append(name.text)
-
-    return geneContent
-
-
-def search_genes_in_xml(genefilename, keywords, topNRank, genexmlfile):
-    '''While parsing xml file, search keywords from the xml contents.
-       If the keyword is found, it adds the additional column to the genefile.
-       The additional column describes
-       the keyword, its rank, and where the keyword is found.
-    '''
-    def get_keyword_hits_from_pubmed(pmIds):
-        '''Return pubmed_hits'''
-        pubmed_hit = {}
-        for pubmed_content in lookup_pubmed_ids(pmIds):
-            #print("pubmed for {}".format(pubmed_content['PMID']))
-            #print(pubmed_content)
-            keywords_found = search_keywords_inPubMed(pubmed_content, keywords, topNRank)
-            pubmed_hit[pubmed_content['PMID']] = keywords_found
-        return pubmed_hit
-
-    def get_keyword_hits_from_genexml(genefilename, genexmlfile):
-        '''Return gene_searched and total PMIDs'''
-        genes_searched = {}
-        pmIds = set()
-        geneNames = []
-        # Read genes and extract gene names which we want to find.
-        for name, func, info in read_gene_file(genefilename):
-            if func != 'intergenic':
-                geneNames.append(name)
-
-        content = etree.iterparse(genexmlfile, events=('end',), tag='Entrezgene')
-        for event, geneEntry in content:
-            # Get gene name of geneEntry, and
-            # if the gene name is on the list of gene names which
-            # are in gene file, parse the gene content from xml and
-            # search keywords over the parsed content.
-            geneName = get_geneName(geneEntry)
-            if geneName in geneNames:
-                dbEntry = get_geneContent(geneEntry)
-                searchResult = search_keywords_inDict(dbEntry, keywords, topNRank)
-                if geneName in genes_searched:
-                    record = genes_searched[geneName]
-                    record['keywordHit'] += searchResult
-                    # XXX this should be a set
-                    record['PmIds'] += make_unique_list(dbEntry['PmIds'])
-                else:
-                    results = {}
-                    results['keywordHit'] = searchResult
-                    results['PmIds'] = make_unique_list(dbEntry['PmIds'])
-                    genes_searched[geneName] = results
-                pmIds.update(results['PmIds'])
-            # Clear node references
-            geneEntry.clear()
-            while geneEntry.getprevious() is not None:
-                del geneEntry.getparent()[0]
-        del content
-        return genes_searched, pmIds
-
-
-    def merge_gene_and_pubmed_hits(genes_searched, pubmed_hit, topNRank):
-        '''Return genes_searched including pubmed_hits'''
-        # Match gene and pubmed
-        for gene, info_searched in genes_searched.iteritems():
-            gene_pubmed_hit = {}
-            gene_keyword_hit = info_searched['keywordHit']
-            gene_pmids = info_searched['PmIds']
-            # Find pubmed hit information over all PMIDs related to the gene.
-            # Count the number of hits of the keyword over all PMIDs.
-            for pmid in gene_pmids:
-                try:
-                    for keyword, rank in pubmed_hit[pmid]:
-                        if keyword in gene_pubmed_hit:
-                            rank, count = gene_pubmed_hit[keyword]
-                            gene_pubmed_hit[keyword] = (rank, count+1)
-                        else:
-                            gene_pubmed_hit[keyword] = (rank, 1)
-                except KeyError:
-                    pass
-            # Merge keyword sections if the keyword was also found in PMID.
-            for n, (keyword, rank, fields) in enumerate(gene_keyword_hit):
-                if keyword in gene_pubmed_hit:
-                    rank, count = gene_pubmed_hit[keyword]
-                    fields.append('PMID(%s/%s)' % (count, len(gene_pmids)))
-                    gene_keyword_hit[n] = (keyword, rank, fields)
-                    del gene_pubmed_hit[keyword]
-            # For the remaining PMID hits, append to keywordHit.
-            for keyword, (rank, count) in gene_pubmed_hit.items():
-                fields = ['PMID(%s/%s)' % (count, len(gene_pmids))]
-                gene_keyword_hit.append((keyword, rank, fields))
-            # Sort keywordHit according to its rank,
-            # so we can determine top n rank.
-            gene_keyword_hit.sort(key=lambda tup: tup[1])
-            genes_searched[gene]['keywordHit'] = gene_keyword_hit[:topNRank]
-        return genes_searched
-
-    genes_searched, pmIds = get_keyword_hits_from_genexml(genefilename,
-                                                          genexmlfile)
-
-    pubmed_hit = get_keyword_hits_from_pubmed(pmIds)
-
-    genes_searched = merge_gene_and_pubmed_hits(genes_searched,
-                                                pubmed_hit, topNRank)
-
-
-    # Make a string for printing.
-    # If there is no keyword hit, then the output would be ''
-    # Otherwise, each keyword would be concatenated with ().
-    for name, info_searched in genes_searched.iteritems():
-        output_format = ''
-        for keyword, rank, fields in info_searched['keywordHit']:
-            output_format += '(%s,%s,%s)' % (keyword, rank, ';'.join(fields))
-        genes_searched[name]['keywordHit'] = output_format
-
-    # Print the results.
-    additionalFields = ['Keyword,Rank,Sections']
-    headers = get_column_headers(genefilename)
-    if headers:
-        headers += additionalFields
-        print '\t'.join(headers)
-    for name, func, geneInfo in read_gene_file(genefilename, padding=True):
-        if name in genes_searched:
-            annotation = genes_searched[name]['keywordHit']
-        else:
-            annotation = "Could not find '%s' in NCBI database" % name
-        if annotation != '':
-            print '\t'.join(geneInfo + [annotation])
-
-
-def search_genes(genefilename, keywords, topNRank, geneDict):
-    '''Search gene information from geneDict, and
-       print the results.
-           genes: csv.DictReader, keywords: list, geneDict: dict
-       1. searches keywords, and appends results to the original data
-          ['Keyword,Rank']
-    '''
-    column_headers = get_column_headers(genefilename)
-    if column_headers:
-        column_headers.append('Keyword,Rank')
-        print '\t'.join(column_headers)
-
-    for name, func, geneInfo in read_gene_file(genefilename, padding=True):
-        if func == 'intergenic':
-            geneInfo.append('')
-            continue
-        # Search keywords against gene database.
-        result = ''
-        try:
-            dbEntry = geneDict[name]
-            searchResults = search_keywords_inString(dbEntry,
-                                                     keywords, topNRank)
-            if searchResults:
-                for key, rank in searchResults:
-                    result += '(%s,%s)' % (key, rank)
-            else:
-                # XXX need detail information?
-                result = ''
-        except KeyError:
-            # If DB does not contain the information on gene name.
-            result = "Could not find '%s' in DB" % name
-            print(geneDict.keys())
-            exit()
-        geneInfo.append(result)
-        print '\t'.join(geneInfo)
-
-
-def search_keywords_inDict(dbEntry, keywords, topNRank):
-    '''Search top N ranking keywords from dbEntry.
-       dbEntry is a dictionary which contains information of each field.
-       The value of each key is a list.
-       e.g) {'AlterName' : ['abc', 'def'], ...}
-       Returns a list of tuples containging
-                         the keyword hitted,
-                         the rank of keyword, and
-                         the fields where the keyword hitted.
-    '''
-    keysFound = []
-    fields = []
-    for n, keyword in enumerate(keywords):
-        for field, content in dbEntry.iteritems():
-            if field == 'GeneRIFs':
-                hit = [keyword in item for item in content]
-                if sum(hit) > 0:
-                    fields.append('%s(%s/%s)' %
-                                  (field, sum(hit), len(content)))
-            else:
-                for item in content:
-                    if keyword in item and field not in fields:
-                        fields.append(field)
-        if len(fields) > 0:
-            keysFound.append((keyword, n+1, fields))
-            fields = []
-
-        if len(keysFound) >= topNRank:
-            break
-
-    return keysFound
-
-
-def search_keywords_inPubMed(pubmedContent, keywords, topNRank):
-    '''Search keywords from pubmedContent.'''
-    # Only interested in article title and abstract
-    content = ''
+def lookup_gene_cache_iter(args, gene_name):
+    gene_cache_dir = make_gene_cache_dirname(args.genecache, args.organism, gene_name)
     try:
-        content += pubmedContent['Article Title']
-        content += ';' + pubmedContent['Abstract']
-    except KeyError:
-        pass
-
-    return search_keywords_inString(content, keywords, topNRank)
-
-
-def search_keywords_inString(dbEntry, keywords, topNRank):
-    '''Searche keyword in the order (according to the rank) and
-       return the keyword and its rank (position in the list).
-       If fail to search, (python) returns None.
-       dbEntry is a string.
-    '''
-    keysFound = []
-    for n, item in enumerate(keywords):
-        if item in dbEntry:
-            keysFound.append((item, n+1))
-        if len(keysFound) >= topNRank:
-            break
-    return keysFound
+        dir_contents = os.listdir(gene_cache_dir)
+    except OSError:
+        logging.info("Could not find cache entry for {}".format(gene_name))
+        return
+    for filename in os.listdir(gene_cache_dir):
+        if filename.endswith('.xml'):
+            file = open(file)
+            yield file
+            file.close()
 
 
-def read_geneDb_asDictionary(geneDb):
-    '''Create gene dictionary from gene database.
-       geneDb is a string in which the content of genes are separated by tab.
-    '''
-    geneDict = {}
-    for line in geneDb:
-        geneContent = line.split('\t')
-        # .tsv file has no column headers.
-        # index 1(one) is gene name.
-        # there is a case where a line is empty.
-        if len(geneContent) >= 2:
-            geneDict[geneContent[1]] = line
+#def search_keywords_inDict(dbEntry, keywords):
+#    '''Search top N ranking keywords from dbEntry.
+#       dbEntry is a dictionary which contains information of each field.
+#       The value of each key is a list.
+#       e.g) {'AlterName' : ['abc', 'def'], ...}
+#       Returns a list of tuples containging
+#                         the keyword hitted,
+#                         the rank of keyword, and
+#                         the fields where the keyword hitted.
+#    '''
+#    keysFound = []
+#    fields = []
+#    for n, keyword in enumerate(keywords):
+#        for field, content in dbEntry.iteritems():
+#            if field == 'GeneRIFs':
+#                hit = [keyword in item for item in content]
+#                if sum(hit) > 0:
+#                    fields.append('%s(%s/%s)' %
+#                                  (field, sum(hit), len(content)))
+#            else:
+#                for item in content:
+#                    if keyword in item and field not in fields:
+#                        fields.append(field)
+#        if len(fields) > 0:
+#            keysFound.append((keyword, n+1, fields))
+#            fields = []
+#
+#    return keysFound
+#
+#
+#def search_keywords_inPubMed(pubmedContent, keywords):
+#    '''Search keywords from pubmedContent.'''
+#    # Only interested in article title and abstract
+#    content = ''
+#    try:
+#        content += pubmedContent['Article Title']
+#        content += ';' + pubmedContent['Abstract']
+#    except KeyError:
+#        pass
+#
+#    return search_keywords_inString(content, keywords)
+#
+#
+#def search_keywords_inString(dbEntry, keywords):
+#    '''Searche keyword in the order (according to the rank) and
+#       return the keyword and its rank (position in the list).
+#       If fail to search, (python) returns None.
+#       dbEntry is a string.
+#    '''
+#    keysFound = []
+#    for n, item in enumerate(keywords):
+#        if item in dbEntry:
+#            keysFound.append((item, n+1))
+#    return keysFound
 
-    return geneDict
+
+
+def make_gene_cache_dirname(cachedir, organism, gene_name):
+    organism_cache_dir = os.path.join(cachedir, organism, 'gene')
+    hash_dir = hash(gene_name) % 256
+    return os.path.join(organism_cache_dir, str(hash_dir), gene_name)
+
+def save_gene_cache(cachedir, organism, gene_records_xml):
+
+    cachedir = args.genecache
+    organism = args.organism
+
+    # create a cache directory for this organism if it doesn't already exist
+    # for example human would go in:
+    # cachedir/human/gene/
+    # the reason for "gene" is because we also cache ncbi entries in "ncbi"
+    #organism_cache_dir = os.path.join(cachedir, organism, 'gene')
+
+    # read each "Entrezgene" record in the input XML and write it out to
+    # a cache file. Sometimes one gene will have multiple entries. We store
+    # each gene entry in a file based on its database ID.
+    parser = etree.iterparse(StringIO(gene_records_xml), events=('end',), tag='Entrezgene')
+
+    for event, elem in parser:
+        # find the official name of the gene
+        gene_name = elem.find('.//Gene-ref_locus').text
+        # find the database id of the gene
+        gene_id = elem.find('.//Gene-track_geneid').text
+        # hash the name of the gene into an integer in the range [0, 255]
+        #hash_dir = hash(gene_name) % 256
+        # if it doesn't already exist, create a directory in the cache for
+        # this gene
+        #gene_cache_dir = os.path.join(organism_cache_dir, str(hash_dir), gene_name)
+        gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
+        if not os.path.exists(gene_cache_dir):
+            os.makedirs(gene_cache_dir)
+        # Write a single 'Entrezgene' entry to a file in the cache using the
+        # database ID for the file name
+        gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
+        with open(gene_cache_filename, 'w') as cache_file:
+            cache_file.write(etree.tostring(elem))
+        # free up memory used by the XML iterative parser
+        elem.clear()
+        while elem.getprevious() is not None:
+            del elem.getparent()[0]
 
 
 def parse_args():
     parser = ArgumentParser(description='Search NCBI for genes of interest, '
                                         'based on concept-keyword search.')
-    parser.add_argument('--searchKeys',
-                        metavar='SEARCHKEYS',
-                        type=file,
+
+    parser.add_argument('--online',
+                        action='store_true',
+                        help='Search gene information from online (NCBI).')
+
+    parser.add_argument('--genecol',
+                        metavar='INT',
+                        type=int,
+                        default=0,
+                        help='The position of the column containing gene name.')
+
+    parser.add_argument('--skipheader',
+                        action='store_true',
+                        help='The first line of the gene file is a header which'
+                             'should be skipped over')
+
+    parser.add_argument('--organism',
+                        type=str,
+                        default='human',
+                        help='Name of the organism to search')
+
+    parser.add_argument('--email',
+                        metavar='EMAIL_ADDRESS',
+                        type=str,
+                        help='Your email address. This is required by'
+                             'NCBI for online queries. You do not need'
+                             'to supply an email address for cached queries.')
+
+    parser.add_argument('--genecache',
+                        metavar='DIR',
+                        type=str,
+                        default='genecache',
+                        help='Save a cache of the downloaded results '
+                             'from NCBI gene into this directory')
+
+    parser.add_argument('--pubmedcache',
+                        metavar='DIR',
+                        type=str,
+                        default='pubmedcache',
+                        help='Save a cache of the downloaded results '
+                             'from NCBI pubmed into this directory')
+
+    parser.add_argument('--keys',
+                        metavar='FILE',
+                        type=str,
                         required=True,
                         help='The tab separated file containing '
                              'the keywords to be searched.')
-    parser.add_argument('--topNRank',
-                        metavar='TOPNRANK',
-                        type=int,
-                        default=1,
-                        help='Top N rank that would be searched. '
-                             'Default is 1.')
+
     parser.add_argument('--genes',
-                        metavar='GENES',
+                        metavar='FILE',
                         type=str,
                         required=True,
                         help='The tab separated file containing '
                              'the gene information including '
                              'name of the gene, one gene name per line.')
-    parser.add_argument('--geneDb',
-                        metavar='GENEDB',
-                        type=file,
-                        help='The tab separated file containing '
-                             'the gene information provided by ncbi, '
-                             'parsed representation of Homo sapiens '
-                             'gene information.')
-    parser.add_argument('--online',
-                        action='store_true',
-                        help='Search gene information from online (NCBI).')
-    parser.add_argument('--saveCache',
-                        metavar='CACHEFILE',
-                        type=str,
-                        help='Save a cache of the downloaded results '
-                             'from NCBI into this file.')
-    parser.add_argument('--loadCache',
-                        metavar='CACHEFILE',
-                        type=str,
-                        help='Load previously cached, downloaded results '
-                             'from NCBI.')
-    parser.add_argument('--geneNameCol',
-                        metavar='NANE',
-                        type=str,
-                        help='The name of the column containing gene name.'
-                             'If the input gene file has column names and '
-                             'if the column name indicating  gene name '
-                             "is 'Gene', then there is no need to pass "
-                             "this option. This program would use 'Gene' "
-                             'as default to find the column that has '
-                             'gene names')
-    parser.add_argument('--geneNameColPos',
-                        metavar='POSITION',
-                        type=int,
-                        help='The index of the column containing gene name. '
-                             'The index should start from 0.'
-                             'If the input gene file does not have column '
-                             'names, then you should pass this option to '
-                             'specify which column should be read for gene '
-                             'names')
-    parser.add_argument('--geneFuncCol',
-                        metavar='NANE',
-                        type=str,
-                        help='The name of the column containing gene func.'
-                             'If the input gene file has column names and '
-                             'if the column name indicating  gene name '
-                             "is 'Func', then there is no need to pass "
-                             "this option. This program would use 'Func' "
-                             'as default to find the column that has '
-                             'gene names')
-    parser.add_argument('--geneFuncColPos',
-                        metavar='POSITION',
-                        type=int,
-                        help='The index of the column containing gene func. '
-                             'The index should start from 0.'
-                             'If the input gene file does not have column '
-                             'names, then you should pass this option to '
-                             'specify which column should be read for gene '
-                             'func')
-    return parser.parse_args()
 
+    parser.add_argument('--log', metavar='FILENAME', type=str, required=True,
+                        help='log progress in FILENAME')
+
+
+    return parser.parse_args()
 
 def main():
     args = parse_args()
-    # Set the column positions of gene name and func.
-    # If the input arguments are not correct,
-    # prints error message and finish the program.
-    result = set_column_options(args)
-    if not result:
-        return
 
-    keywords = [line.strip() for line in args.searchKeys]
-    if args.geneDb:
-        # Search from the given DB file.
-        geneDict = read_geneDb_asDictionary(args.geneDb)
-        search_genes(args.genes, keywords, args.topNRank, geneDict)
+    logging.basicConfig(filename=args.log,
+                        level=logging.DEBUG,
+                        filemode='w',
+                        format='%(asctime)s %(message)s',
+                        datefmt='%m/%d/%Y %H:%M:%S')
+    logging.info('program started')
+    logging.info('command line: {0}'.format(' '.join(sys.argv)))
 
-    elif args.online:
-        cacheFile = ''
-        if args.saveCache:
-            cacheFile = args.saveCache
+    if args.online:
+        # Get gene information online.
+
+        if args.email:
+            Entrez.email = args.email
         else:
-            cacheFile = 'cache'
-        # Get gene information over online.
-        geneIds = get_geneIds(args.genes)
-        filename = fetch_and_save('gene', geneIds, cacheFile)
-        # Search keywords.
-        search_genes_in_xml(args.genes, keywords,
-                            args.topNRank, filename)
-    elif args.loadCache:
-        # Get gene information from cache.
-        search_genes_in_xml(args.genes, keywords,
-                            args.topNRank, args.loadCache)
+            exit('An email address is required for online queries, use the --email flag')
 
-    else:
-        print '* Error *'
-        print 'One of --geneDb, --online, and --loadCache is necessary.'
+        # read each gene name from the gene file at a given column
+        gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
+
+        # fetch the corresponding XML records for the identified genes
+        gene_records_xml = fetch_records_from_ids(gene_ids)
+
+        # Cache the gene entries in the XML file
+        save_gene_cache(args, gene_records_xml) 
+
+    # Get gene information from cache.
+    search_keywords(args)
 
 if __name__ == '__main__':
     main()
