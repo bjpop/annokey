@@ -129,7 +129,6 @@ def get_gene_ids(genefilename, column, organism='Homo sapiens'):
     gene_ids = set()
 
     for names in chunk_gene_names(genefilename, chunk_size=100):
-        print names
         terms = ' OR '.join(['%s[sym]' % name for name in names])
         search_term = '{0}[organism] AND ({1})'.format(organism, terms)
         request = Entrez.esearch(db='gene', term=search_term, retmax=10000)
