@@ -487,7 +487,6 @@ def main():
 
         # read each gene name from the gene file at a given column
         gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
-        print len(gene_ids)
         # fetch the corresponding XML records for the identified genes
         gene_records_xml = fetch_records_from_ids(gene_ids)
 
