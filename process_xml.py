@@ -20,6 +20,28 @@ from lxml import etree
 from StringIO import StringIO
 import itertools
 
+
+class Hit(object):
+    def __init__(self, keyword, rank, database_record_id, fields):
+        self.keyword = keyword # string
+        self.rank = rank # int
+        self.fields = fields # [string]
+        self.database_record_id = database_record_id # int
+
+    def __str__(self):
+        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
+
+
+class GeneParser(object):
+    @staticmethod
+    def keyword_hit(xmlfile, keywords):
+        parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
+        for event, geneEntry in parser:    
+            geneId, content = get_geneContent(geneEntry)
+            for hit in search_keywords_inDict(content, keywords, geneId):
+                yield hit
+
+
 def lookup_pubmed_ids(ids):
     not_cached_ids = []
     # search for all the cached pubmed ids first, and
@@ -326,10 +348,12 @@ def get_geneContent(geneEntry):
                    'Function': [],
                    'Component': [],
                    'Process': []}
+    geneId = None
 
     for elem in geneEntry.iterchildren():
 
         if elem.tag == 'Entrezgene_track-info':
+            geneId = elem.find('.//Gene-track/Gene-track_geneid').text
             status = elem.find('.//Gene-track/Gene-track_status')
             if (status is not None and
                     status.attrib['value'] == 'discontinued'):
@@ -372,7 +396,9 @@ def get_geneContent(geneEntry):
                     if (name.tag == 'Prot-ref_name_E' and
                             name.text is not None):
                         geneContent['Alternative Name'].append(name.text)
-    return geneContent
+    return (geneId, geneContent)
+
+
 
 #    def get_keyword_hits_from_pubmed(pmIds):
 #        '''Return pubmed_hits'''
@@ -502,7 +528,7 @@ def get_geneContent(geneEntry):
 #        print '\t'.join(geneInfo)
 
 
-def search_keywords_inDict(dbEntry, keywords):
+def search_keywords_inDict(dbEntry, keywords, geneId):
     '''Search top N ranking keywords from dbEntry.
        dbEntry is a dictionary which contains information of each field.
        The value of each key is a list.
@@ -526,10 +552,11 @@ def search_keywords_inDict(dbEntry, keywords):
                     if keyword in item and field not in fields:
                         fields.append(field)
         if len(fields) > 0:
-            keysFound.append((keyword, n+1, fields))
+            yield Hit(keyword, n+1, geneId, fields)
+            #keysFound.append((keyword, n+1, fields))
             fields = []
 
-    return keysFound
+    #return keysFound
 
 
 def search_keywords_inPubMed(pubmedContent, keywords):

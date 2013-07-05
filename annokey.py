@@ -50,6 +50,9 @@ import itertools
 import cPickle as pickle
 import logging
 
+from process_xml import GeneParser, Hit
+
+
 #NCBI access rate limit
 #http://www.ncbi.nlm.nih.gov/books/NBK25497/
 #In order not to overload the E-utility servers, NCBI recommends that users
@@ -116,7 +119,7 @@ def get_gene_ids(genefilename, column, organism='Homo sapiens'):
         names = []
         numbered_gene_names = enumerate(get_gene_names(genefilename, column))
         for n, name in numbered_gene_names:
-            names.append(name)
+            names.append(name.strip())
             if (n+1) % chunk_size == 0:
                 yield names
                 names = []
@@ -126,12 +129,12 @@ def get_gene_ids(genefilename, column, organism='Homo sapiens'):
     gene_ids = set()
 
     for names in chunk_gene_names(genefilename, chunk_size=100):
+        print names
         terms = ' OR '.join(['%s[sym]' % name for name in names])
         search_term = '{0}[organism] AND ({1})'.format(organism, terms)
         request = Entrez.esearch(db='gene', term=search_term, retmax=10000)
         result = Entrez.read(request)
         gene_ids.update(result['IdList'])
-
     return gene_ids
 
 
@@ -235,15 +238,16 @@ def merge_geneContent(geneContent, values):
     return geneContent
 
 
-class Hit(object):
-    def __init__(self, keyword, rank, database_record_id, fields):
-        self.keyword = keyword # string
-        self.rank = rank # int
-        self.fields = fields # [string]
-        self.database_record_id = database_record_id # int
+#class Hit(object):
+#    def __init__(self, keyword, rank, database_record_id, fields):
+#        self.keyword = keyword # string
+#        self.rank = rank # int
+#        self.fields = fields # [string]
+#        self.database_record_id = database_record_id # int
+#
+#    def __str__(self):
+#        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
 
-    def __str__(self):
-        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
 
 def search_keywords(args):
 
@@ -263,7 +267,7 @@ def search_keywords(args):
             # for each row in the genes file, find hits for the gene
             # print the row out with the hits annoated on the end
             for row in reader:
-                genename = row[args.genecol]
+                genename = row[args.genecol].strip()
                 for hit in search_keywords_gene_iter(args, genename, keywords):
                     row.append(str(hit))
                 writer.writerow(row)
@@ -276,7 +280,9 @@ def search_keywords(args):
 # file ID
 def search_keywords_gene_iter(args, gene_name, keywords):
     for gene_xml in lookup_gene_cache_iter(args, gene_name):
-        yield Hit('some_keyword', 12, 12345, ['this', 'that', 'other'])
+        for hit in GeneParser.keyword_hit(gene_xml, keywords):
+            yield hit
+
 
 def lookup_gene_cache_iter(args, gene_name):
     gene_cache_dir = make_gene_cache_dirname(args.genecache, args.organism, gene_name)
@@ -286,10 +292,11 @@ def lookup_gene_cache_iter(args, gene_name):
         logging.info("Could not find cache entry for {}".format(gene_name))
         return
     for filename in os.listdir(gene_cache_dir):
-        if filename.endswith('.xml'):
-            file = open(file)
-            yield file
-            file.close()
+        #if filename.endswith('.xml'):
+        file = '%s/%s' % (gene_cache_dir, filename)
+        file = open(file)
+        yield file
+        file.close()
 
 
 #def search_keywords_inDict(dbEntry, keywords):
@@ -356,8 +363,8 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
 
 def save_gene_cache(cachedir, organism, gene_records_xml):
 
-    cachedir = args.genecache
-    organism = args.organism
+    #cachedir = args.genecache
+    #organism = args.organism
 
     # create a cache directory for this organism if it doesn't already exist
     # for example human would go in:
@@ -481,12 +488,12 @@ def main():
 
         # read each gene name from the gene file at a given column
         gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
-
+        print len(gene_ids)
         # fetch the corresponding XML records for the identified genes
         gene_records_xml = fetch_records_from_ids(gene_ids)
 
         # Cache the gene entries in the XML file
-        save_gene_cache(args, gene_records_xml) 
+        save_gene_cache(args.genecache, args.organism, gene_records_xml) 
 
     # Get gene information from cache.
     search_keywords(args)
