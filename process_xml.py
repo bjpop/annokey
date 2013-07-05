@@ -33,8 +33,11 @@ class Hit(object):
 
 
 class GeneParser(object):
+    
     @staticmethod
     def keyword_hit(xmlfile, keywords):
+        # parse given xmlfile and extract what we are interested in.
+        # look up keywords from extracted content of gene.
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
         for event, geneEntry in parser:    
             geneId, content = get_geneContent(geneEntry)
