@@ -538,7 +538,6 @@ def search_keywords_inDict(dbEntry, keywords, geneId):
                          the rank of keyword, and
                          the fields where the keyword hitted.
     '''
-    keysFound = []
     fields = []
     for n, keyword in enumerate(keywords):
         for field, content in dbEntry.iteritems():
@@ -553,10 +552,7 @@ def search_keywords_inDict(dbEntry, keywords, geneId):
                         fields.append(field)
         if len(fields) > 0:
             yield Hit(keyword, n+1, geneId, fields)
-            #keysFound.append((keyword, n+1, fields))
             fields = []
-
-    #return keysFound
 
 
 def search_keywords_inPubMed(pubmedContent, keywords):
