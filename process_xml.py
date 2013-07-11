@@ -39,7 +39,11 @@ class GeneParser(object):
         # parse given xmlfile and extract what we are interested in.
         # look up keywords from extracted content of gene.
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
-        for event, geneEntry in parser:    
+        for event, geneEntry in parser:
+            # XXX We use intermidiate Dictionary at the moment rather than
+            # scanning XML file directly, since iterating dictionary N times
+            # may be faster than scanning XML file N times when
+            # there are N keywords.
             geneId, content = get_geneContent(geneEntry)
             for hit in search_keywords_inDict(content, keywords, geneId):
                 yield hit
@@ -334,7 +338,9 @@ def parse_geneCommentary(commentary):
 
     return retValues
 
-
+# XXX
+# Dictionary vs Class having attributes
+# Not sure about the benefits of Class compared to Dictionary. 
 def get_geneContent(geneEntry):
     '''Parse element Entrezgene.'''
 
