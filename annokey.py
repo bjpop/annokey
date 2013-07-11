@@ -412,7 +412,8 @@ def parse_args():
                         metavar='INT',
                         type=int,
                         default=0,
-                        help='The position of the column containing gene name.')
+                        required=True,
+                        help='The position of the column containing gene name. (0 base)')
 
     parser.add_argument('--skipheader',
                         action='store_true',
