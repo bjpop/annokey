@@ -237,16 +237,6 @@ def lookup_pubmed_ids(ids):
         retstart += chunk_size
 
 
-def lookup_pubmed_cache(id):
-    hashed_id = int(id) % 256
-    pickle_filename = os.path.join('pubmed_cache', str(hashed_id), id)
-    if os.path.isfile(pickle_filename):
-        with open(pickle_filename) as file:
-            pubmed_content = pickle.load(file)
-            return pubmed_content
-    else:
-        return None
-
 # assume input is a set
 def fetch_records_from_ids(ids):
 
@@ -281,16 +271,6 @@ def merge_geneContent(geneContent, values):
     for key, value in values:
         geneContent[key] += value 
     return geneContent
-
-
-#class Hit(object):
-#    def __init__(self, keyword, rank, database_record_id, fields):
-#        self.keyword = keyword # string
-#        self.rank = rank # int
-#        self.fields = fields # [string]
-#        self.database_record_id = database_record_id # int
-#
-#    def __str__(self):
 #        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
 
 
@@ -325,7 +305,7 @@ def search_keywords(args):
 # file ID
 def search_keywords_gene_iter(args, gene_name, keywords):
     for gene_xml in lookup_gene_cache_iter(args, gene_name):
-        for hit in GeneParser.keyword_hit(gene_xml, keywords):
+        for hit in GeneParser.keyword_hit(gene_xml, keywords, args.pubmedcache):
             yield hit
 
 

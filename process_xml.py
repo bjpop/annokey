@@ -15,6 +15,8 @@ License:   BSD, see LICENCE file in source distribution.
 --------------------------------------------------------------------------------
 '''
 
+import os
+import cPickle as pickle
 from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
@@ -35,7 +37,7 @@ class Hit(object):
 class GeneParser(object):
     
     @staticmethod
-    def keyword_hit(xmlfile, keywords):
+    def keyword_hit(xmlfile, keywords, pubmed_cachedir):
         # parse given xmlfile and extract what we are interested in.
         # look up keywords from extracted content of gene.
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
@@ -45,7 +47,15 @@ class GeneParser(object):
             # may be faster than scanning XML file N times when
             # there are N keywords.
             geneId, content = get_geneContent(geneEntry)
+            pubmed_hits = search_keywords_in_pubmed(pubmed_cachedir, content["PmIds"], keywords, geneId)
             for hit in search_keywords_inDict(content, keywords, geneId):
+                # If keyword is also in PubMed, append PubMed to field.
+                if hit.keyword in pubmed_hits:
+                    hit.fields = hit.fields + pubmed_hits[hit.keyword].fields
+                    del pubmed_hits[hit.keyword]
+                yield hit
+            # For the remaining PubMed hits
+            for keyword, hit in pubmed_hits.iteritems():
                 yield hit
 
     @staticmethod
@@ -56,6 +66,17 @@ class GeneParser(object):
         for event, geneEntry in parser:
             pmids.update(read_pubmed_ids(geneEntry))
         return pmids
+
+
+class PubMedParser(object):
+
+    @staticmethod
+    def keyword_hit(xmlfile, keywords):
+        # Parse the given xmlfile and return keywords hit.
+        parser = etree.iterparse(xmlfile, events=('end',), tag='PubmedArticle')
+        for event, pubmed_entry in parser:
+            content =  get_pubmed_content(pubmed_entry)
+            return search_keywords_inPubMed(content, keywords)
 
 
 # parse PubMed only
@@ -69,6 +90,56 @@ def read_pubmed_ids(geneEntry):
                 pmids.append(pubMedId.text)
 
     return pmids
+
+# For caching PubMed keyword search history
+pubmed_hit_cache = {}
+# Search keywords in PubMed articles. 
+def search_keywords_in_pubmed(cachedir, ids, keywords, gene_id):
+    keyword_hits = {}
+    for id in ids:
+        # For each PubMed article, look up hit history first,
+        # If no history in hit cache, look up PubMed file.
+        keyword_hit = []
+        try:
+            keyword_hit = pubmed_hit_cache[id]
+        except KeyError:
+            pubmed_file = lookup_pubmed_cache(cachedir, id)
+            if pubmed_file is not None:
+                keyword_hit = PubMedParser.keyword_hit(pubmed_file, keywords)
+                pubmed_hit_cache[id] = keyword_hit
+            else:
+                print("did not find PubMed {} in cache:".format(id))
+
+        # Increase hit counts.
+        for keyword in keyword_hit:
+            try:
+                keyword_hits[keyword] += 1
+            except KeyError:
+                keyword_hits[keyword] = 1
+
+    # Make a list of Hit
+    for n, keyword in enumerate(keywords):
+        # XXX there are duplicated keywords with different ranks.
+        # So, we need to check the count is int or not.
+        if keyword in keyword_hits:
+            count = keyword_hits[keyword]
+            if isinstance(count, int):
+                field = ["PMID({}/{})".format(keyword_hits[keyword], len(ids))]
+                keyword_hits[keyword] = Hit(keyword, n+1, gene_id, field)
+    return keyword_hits
+
+
+def lookup_pubmed_cache(cachedir, id):
+    hashed_id = hash(id) % 256
+    pubmed_filename = os.path.join(cachedir, str(hashed_id), id)
+    if os.path.isfile(pubmed_filename):
+        return pubmed_filename
+        #with open(pickle_filename) as file:
+        #    pubmed_file = pickle.load(file)
+        #    return pubmed_file
+    else:
+        return None
+
 
 
 def lookup_pubmed_ids(ids):
@@ -596,7 +667,12 @@ def search_keywords_inPubMed(pubmedContent, keywords):
     except KeyError:
         pass
 
-    return search_keywords_inString(content, keywords)
+    keysHit = []
+    for keyword in keywords:
+        if keyword in content:
+            keysHit.append(keyword)
+
+    return keysHit 
 
 
 def search_keywords_inString(dbEntry, keywords):
