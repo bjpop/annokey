@@ -137,6 +137,52 @@ def get_gene_ids(genefilename, column, organism='Homo sapiens'):
     return gene_ids
 
 
+# For each gene in genesfile we read PubMedIds using genecache.
+def get_pubmed_ids(args):
+    pubmed_ids = set()
+    
+    with open(args.genes) as genesfile:
+        header, reader, dialect = genefile_reader(genesfile)
+        for row in reader:
+            genename = row[args.genecol].strip()
+            for gene_xml in lookup_gene_cache_iter(args, genename):
+                pubmed_ids.update(GeneParser.pubmed_ids(gene_xml))
+
+    return pubmed_ids
+
+
+def fetch_and_save_pubmed_records(cachedir, organism, ids):
+    # XXX Fetch all records here regardless of existing pubmed cache.
+    # We may be able to skip the records that already exist if
+    # the records are not updated.
+    # XXX As the number of pubmed ids is usually large,
+    # save XML file in cache right after fetching them.
+    idString = ','.join(ids)
+    postRequest = Entrez.epost(db='pubmed', id=idString)
+    postResult = Entrez.read(postRequest)
+    webEnv = postResult['WebEnv']
+    queryKey = postResult['QueryKey']
+    retstart = 0
+    chunk_size = 10000
+
+    while retstart < len(ids):
+        try:
+            fetch_request = Entrez.efetch(db='pubmed',
+                                          webenv=webEnv,
+                                          query_key=queryKey,
+                                          retmode='xml',
+                                          retmax=chunk_size,
+                                          retstart=retstart)
+            pubmed_result = fetch_request.read()
+        # XXX What should we do on exception? Try again? Sleep? Quit?
+        except Exception as e:
+            print("fetch failed with: {} {}".format(e, type(e)))
+            break
+
+        save_pubmed_cache(cachedir, pubmed_result)
+        retstart += chunk_size
+
+
 def lookup_pubmed_ids(ids):
     not_cached_ids = []
     # search for all the cached pubmed ids first, and
@@ -354,11 +400,35 @@ def lookup_gene_cache_iter(args, gene_name):
 #    return keysFound
 
 
+def make_pubmed_cache_dirname(cachedir, pubmed_id):
+    hash_dir = hash(pubmed_id) % 256
+    return os.path.join(cachedir, str(hash_dir))
 
 def make_gene_cache_dirname(cachedir, organism, gene_name):
     organism_cache_dir = os.path.join(cachedir, organism, 'gene')
     hash_dir = hash(gene_name) % 256
     return os.path.join(organism_cache_dir, str(hash_dir), gene_name)
+
+def save_pubmed_cache(cachedir, pubmed_records_xml):
+    # Read each "PubMedArticle" record in the input XML and 
+    # write it out to a cache file. We store each article entry in a file
+    # based on its PubMed ID.
+    
+    parser = etree.iterparse(StringIO(pubmed_records_xml), events=('end',), tag='PubmedArticle')
+    for event, pubmed_entry in parser:
+        # Find pubmed id
+        pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
+        pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, pubmed_id)
+        if not os.path.exists(pubmed_cache_dir):
+            os.makedirs(pubmed_cache_dir)
+        pubmed_cache_filename = os.path.join(pubmed_cache_dir, pubmed_id)
+        with open(pubmed_cache_filename, 'w') as cache_file:
+            cache_file.write(etree.tostring(pubmed_entry))
+        # free up memory used by the XML iterative parser
+        pubmed_entry.clear()
+        while pubmed_entry.getprevious() is not None:
+            del pubmed_entry.getparent()[0]
+
 
 def save_gene_cache(cachedir, organism, gene_records_xml):
 
@@ -398,6 +468,24 @@ def save_gene_cache(cachedir, organism, gene_records_xml):
         elem.clear()
         while elem.getprevious() is not None:
             del elem.getparent()[0]
+
+
+def fetch_records(args):
+    # fetch gene records and pubmed records and save them in cache.
+
+    # read each gene name from the gene file at a given column
+    gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
+    # fetch the corresponding XML records for the identified genes
+    gene_records_xml = fetch_records_from_ids(gene_ids)
+    # Cache the gene entries in the XML file
+    save_gene_cache(args.genecache, args.organism, gene_records_xml)
+
+    # pubmed records
+    # get pubmed ids from each gene records
+    pubmed_ids = get_pubmed_ids(args)
+    # fetch the corresponding XML records for pubmed ids
+    # cache the pubmed records
+    fetch_and_save_pubmed_records(args.pubmedcache, args.organism, pubmed_ids)
 
 
 def parse_args():
@@ -486,13 +574,8 @@ def main():
         else:
             exit('An email address is required for online queries, use the --email flag')
 
-        # read each gene name from the gene file at a given column
-        gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
-        # fetch the corresponding XML records for the identified genes
-        gene_records_xml = fetch_records_from_ids(gene_ids)
-
-        # Cache the gene entries in the XML file
-        save_gene_cache(args.genecache, args.organism, gene_records_xml) 
+        # fetch gene and pubmed records and save them in cache. 
+        fetch_records(args)
 
     # Get gene information from cache.
     search_keywords(args)

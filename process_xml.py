@@ -48,6 +48,28 @@ class GeneParser(object):
             for hit in search_keywords_inDict(content, keywords, geneId):
                 yield hit
 
+    @staticmethod
+    def pubmed_ids(xmlfile):
+        # parse given xmlfile and extract pubmed ids.
+        pmids = set()
+        parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
+        for event, geneEntry in parser:
+            pmids.update(read_pubmed_ids(geneEntry))
+        return pmids
+
+
+# parse PubMed only
+def read_pubmed_ids(geneEntry):
+    pmids = []
+    elem = geneEntry.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
+    if elem is not None:
+        for pub in elem.iterchildren():
+            pubMedId = pub.find('.//Pub_pmid/PubMedId')
+            if pubMedId is not None and pubMedId.text is not None:
+                pmids.append(pubMedId.text)
+
+    return pmids
+
 
 def lookup_pubmed_ids(ids):
     not_cached_ids = []
