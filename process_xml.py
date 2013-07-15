@@ -16,7 +16,6 @@ License:   BSD, see LICENCE file in source distribution.
 '''
 
 import os
-import cPickle as pickle
 from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
@@ -51,7 +50,7 @@ class GeneParser(object):
             for hit in search_keywords_inDict(content, keywords, geneId):
                 # If keyword is also in PubMed, append PubMed to field.
                 if hit.keyword in pubmed_hits:
-                    hit.fields = hit.fields + pubmed_hits[hit.keyword].fields
+                    hit.fields += pubmed_hits[hit.keyword].fields
                     del pubmed_hits[hit.keyword]
                 yield hit
             # For the remaining PubMed hits
@@ -61,11 +60,16 @@ class GeneParser(object):
     @staticmethod
     def pubmed_ids(xmlfile):
         # parse given xmlfile and extract pubmed ids.
-        pmids = set()
+        pmids = []
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
         for event, geneEntry in parser:
-            pmids.update(read_pubmed_ids(geneEntry))
-        return pmids
+            elem = geneEntry.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
+            if elem is not None:
+                for pub in elem.iterchildren():
+                    pubMedId = pub.find('.//Pub_pmid/PubMedId')
+                    if pubMedId is not None and pubMedId.text is not None:
+                        pmids.append(pubMedId.text)
+        return set(pmids)
 
 
 class PubMedParser(object):
@@ -76,24 +80,25 @@ class PubMedParser(object):
         parser = etree.iterparse(xmlfile, events=('end',), tag='PubmedArticle')
         for event, pubmed_entry in parser:
             content =  get_pubmed_content(pubmed_entry)
-            return search_keywords_inPubMed(content, keywords)
+            # scan title and abstract only for keyword search.
+            title_abst = ''
+            try:
+                title_abst += content['Article Title']
+                title_abst += content['Abstract']
+            except KeyError:
+                pass
+            keysHit = []
+            for keyword in keywords:
+                if keyword in title_abst:
+                    keysHit.append(keyword)
+            return keysHit
 
-
-# parse PubMed only
-def read_pubmed_ids(geneEntry):
-    pmids = []
-    elem = geneEntry.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
-    if elem is not None:
-        for pub in elem.iterchildren():
-            pubMedId = pub.find('.//Pub_pmid/PubMedId')
-            if pubMedId is not None and pubMedId.text is not None:
-                pmids.append(pubMedId.text)
-
-    return pmids
 
 # For caching PubMed keyword search history
 pubmed_hit_cache = {}
-# Search keywords in PubMed articles. 
+
+# Search keywords in PubMed articles. Return a list of Hit.
+# We manange pubmed_hit_cache to avoid repeated cache lookup. 
 def search_keywords_in_pubmed(cachedir, ids, keywords, gene_id):
     keyword_hits = {}
     for id in ids:
@@ -134,12 +139,6 @@ def lookup_pubmed_cache(cachedir, id):
     pubmed_filename = os.path.join(cachedir, str(hashed_id), id)
     if os.path.isfile(pubmed_filename):
         return pubmed_filename
-        #with open(pickle_filename) as file:
-        #    pubmed_file = pickle.load(file)
-        #    return pubmed_file
-    else:
-        return None
-
 
 
 def lookup_pubmed_ids(ids):
@@ -655,24 +654,6 @@ def search_keywords_inDict(dbEntry, keywords, geneId):
         if len(fields) > 0:
             yield Hit(keyword, n+1, geneId, fields)
             fields = []
-
-
-def search_keywords_inPubMed(pubmedContent, keywords):
-    '''Search keywords from pubmedContent.'''
-    # Only interested in article title and abstract
-    content = ''
-    try:
-        content += pubmedContent['Article Title']
-        content += ';' + pubmedContent['Abstract']
-    except KeyError:
-        pass
-
-    keysHit = []
-    for keyword in keywords:
-        if keyword in content:
-            keysHit.append(keyword)
-
-    return keysHit 
 
 
 def search_keywords_inString(dbEntry, keywords):
