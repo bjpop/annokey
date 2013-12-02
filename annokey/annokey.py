@@ -84,6 +84,7 @@ from process_xml import GeneParser, Hit
 #encouraged to do so.
 
 
+'''
 def genefile_reader(csvfile):
     # try to detect the csv format from the (up to)
     # first three lines of the file
@@ -102,22 +103,23 @@ def genefile_reader(csvfile):
     else:
         header = None
     return header, reader, dialect
+'''
 
 
-# read each gene name from the gene file at a given column
-def get_gene_names(genefilename, column):
+# read each gene name from the gene file
+def get_gene_names(genefilename):
     with open(genefilename, 'rb') as file:
-        header, reader, dialect = genefile_reader(file)
+        reader = csv.DictReader(file)
         for row in reader:
-            name = row[column]
+            name = row['Gene'].strip()
             yield name
 
 
-def get_gene_ids(genefilename, column, organism='Homo sapiens'):
+def get_gene_ids(genefilename, organism='Homo sapiens'):
 
     def chunk_gene_names(genefilename, chunk_size):
         names = []
-        numbered_gene_names = enumerate(get_gene_names(genefilename, column))
+        numbered_gene_names = enumerate(get_gene_names(genefilename))
         for n, name in numbered_gene_names:
             names.append(name.strip())
             if (n+1) % chunk_size == 0:
@@ -142,9 +144,10 @@ def get_pubmed_ids(args):
     pubmed_ids = set()
     
     with open(args.genes) as genesfile:
-        header, reader, dialect = genefile_reader(genesfile)
+        #header, reader, dialect = genefile_reader(genesfile)
+        reader = csv.DictReader(genesfile)
         for row in reader:
-            genename = row[args.genecol].strip()
+            genename = row['Gene'].strip()
             for gene_xml in lookup_gene_cache_iter(args, genename):
                 pubmed_ids.update(GeneParser.pubmed_ids(gene_xml))
 
@@ -190,10 +193,8 @@ def lookup_pubmed_ids(ids):
     for id in ids:
         cache_result = lookup_pubmed_cache(id)
         if cache_result is not None:
-            #print("found {} in cache:".format(id))
             yield cache_result
         else:
-            print("did not find {} in cache:".format(id))
             not_cached_ids.append(id)
 
     # I don't think we should do the chunking here, but instead
@@ -285,17 +286,19 @@ def search_keywords(args):
 
     if len(keywords) > 0:
         with open(args.genes) as genesfile:
-            header, reader, dialect = genefile_reader(genesfile)
-            writer = csv.writer(sys.stdout, dialect=dialect)
-            if header:
-                writer.writerow(header)
+            reader = csv.DictReader(genesfile)
+            writer = csv.writer(sys.stdout)
+            # preserve the header from the original gene file
+            new_header = reader.fieldnames + ['Annokey_annotation']
+            writer.writerow(new_header)
             # for each row in the genes file, find hits for the gene
             # print the row out with the hits annoated on the end
-            for row in reader:
-                genename = row[args.genecol].strip()
-                for hit in search_keywords_gene_iter(args, genename, keywords):
-                    row.append(str(hit))
-                writer.writerow(row)
+            #hits = []
+            for input_row in reader:
+                genename = input_row['Gene'].strip()
+                hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
+                output_row = [input_row[field] for field in reader.fieldnames]
+                writer.writerow(output_row + hits)
 
 
 # Search for each keyword in the XML file for a gene. A hit is yielded for
@@ -453,8 +456,8 @@ def save_gene_cache(cachedir, organism, gene_records_xml):
 def fetch_records(args):
     # fetch gene records and pubmed records and save them in cache.
 
-    # read each gene name from the gene file at a given column
-    gene_ids = get_gene_ids(args.genes, args.genecol, args.organism)
+    # read each gene name from the gene file 
+    gene_ids = get_gene_ids(args.genes, args.organism)
     # fetch the corresponding XML records for the identified genes
     gene_records_xml = fetch_records_from_ids(gene_ids)
     # Cache the gene entries in the XML file
@@ -475,18 +478,6 @@ def parse_args():
     parser.add_argument('--online',
                         action='store_true',
                         help='Search gene information from online (NCBI).')
-
-    parser.add_argument('--genecol',
-                        metavar='INT',
-                        type=int,
-                        default=0,
-                        required=True,
-                        help='The position of the column containing gene name. (0 base)')
-
-    parser.add_argument('--skipheader',
-                        action='store_true',
-                        help='The first line of the gene file is a header which'
-                             'should be skipped over')
 
     parser.add_argument('--organism',
                         type=str,
@@ -560,5 +551,5 @@ def main():
     # Get gene information from cache.
     search_keywords(args)
 
-if __name__ == '__main__':
-    main()
+#if __name__ == '__main__':
+#    main()

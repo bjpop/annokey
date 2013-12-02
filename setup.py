@@ -26,9 +26,9 @@ setup(
         'or "DNA repair pathways" etcetera. The user steers the '
         'search by specifying a ranked list of keywords and phrases '
         'that are likely to be highly correlated with their domain '
-        'of interest.'
+        'of interest.'),
     install_requires=[
-        "Bio >= 1.62",
+        "biopython >= 1.62",
         "lxml >= 3.1"
     ],
 )

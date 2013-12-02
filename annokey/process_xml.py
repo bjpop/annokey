@@ -113,7 +113,9 @@ def search_keywords_in_pubmed(cachedir, ids, keywords, gene_id):
                 keyword_hit = PubMedParser.keyword_hit(pubmed_file, keywords)
                 pubmed_hit_cache[id] = keyword_hit
             else:
-                print("did not find PubMed {} in cache:".format(id))
+                pass
+                # XXX maybe should log an error
+                #print("did not find PubMed {} in cache:".format(id))
 
         # Increase hit counts.
         for keyword in keyword_hit:
@@ -151,7 +153,7 @@ def lookup_pubmed_ids(ids):
             #print("found {} in cache:".format(id))
             yield cache_result
         else:
-            print("did not find {} in cache:".format(id))
+            #print("did not find {} in cache:".format(id))
             not_cached_ids.append(id)
 
     # I don't think we should do the chunking here, but instead
