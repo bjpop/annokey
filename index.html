@@ -83,7 +83,27 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 <p>This will automatically download and install the dependencies of Annokey.</p>
 
 <h3>
-<a name="how-to-run-annokey" class="anchor" href="#how-to-run-annokey"><span class="octicon octicon-link"></span></a>How to run Annokey</h3>
+<a name="online-versus-offline-search" class="anchor" href="#online-versus-offline-search"><span class="octicon octicon-link"></span></a>Online versus offline search</h3>
+
+<p>Annokey obtains its search results by querying the NCBI gene database. It can access that data in two ways:</p>
+
+<ol>
+<li>By sending queries to the online database via the Entrez programming interface.</li>
+<li>By searching in a locally cached copy of the data.</li>
+</ol><p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
+
+<p>Annokey automatically keeps a local cache of any data retrieved from an online search. This allows you to incrementally accumulate a local copy of parts of the database, without having to download the entire thing in advance.</p>
+
+<p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, however you can specify an alternative location via a command line argument. The structure of the cache directory is as follows:</p>
+
+<pre><code>genecache
+    organism (e.g. human, mouse)
+        hash_dir (a numbered directory in the range [0,255])
+            gene_name (e.g. MORN1)
+                gene_id (XML file, e.g 79906)
+</code></pre>
+
+<p>At the top level is the genecache directory. This has sub-directories for each organism. This has up to 256 sub-directories numbered 0 to 255. The purpose of these sub-directories is to spread out the stored gene information, so that we don't put all the gene files in one sub-directory. Some computer file systems exhibit poor performance when you put too many files in one directory.  </p>
       </section>
     </div>
 
