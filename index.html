@@ -121,6 +121,33 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 
 <hr><h3>
 <a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
+
+<p>You can get help about the Annokey command line by using <code>annokey -h</code>, which will produce this output:</p>
+
+<pre><code>usage: annokey [-h] [--online] [--organism ORGANISM] [--email EMAIL_ADDRESS]
+               [--genecache DIR] [--pubmedcache DIR] --keys FILE --genes FILE
+               [--log FILENAME]
+
+Search NCBI for genes of interest, based on concept-keyword search.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --online              Search gene information from online (NCBI).
+  --organism ORGANISM   Name of the organism to search
+  --email EMAIL_ADDRESS
+                        Your email address. This is required byNCBI for online
+                        queries. You do not needto supply an email address for
+                        cached queries.
+  --genecache DIR       Save a cache of the downloaded results from NCBI gene
+                        into this directory
+  --pubmedcache DIR     Save a cache of the downloaded results from NCBI
+                        pubmed into this directory
+  --keys FILE           The tab separated file containing the keywords to be
+                        searched.
+  --genes FILE          The tab separated file containing the gene information
+                        including name of the gene, one gene name per line.
+  --log FILENAME        log progress in FILENAME, defaults to annokey_log.txt
+</code></pre>
       </section>
     </div>
 
