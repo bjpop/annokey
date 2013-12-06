@@ -75,6 +75,8 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 <h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
+<p>Annokey currently requires version 2.7 of Python.</p>
+
 <p>The best way to install Annokey is to use the following command:</p>
 
 <pre><code>pip install git+https://github.com/bjpop/annokey.git
@@ -122,7 +124,7 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 <hr><h3>
 <a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
 
-<p>You can get help about the Annokey command line by using <code>annokey -h</code>, which will produce this output:</p>
+<p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
 
 <pre><code>usage: annokey [-h] [--online] [--organism ORGANISM] [--email EMAIL_ADDRESS]
                [--genecache DIR] [--pubmedcache DIR] --keys FILE --genes FILE
@@ -132,6 +134,7 @@ Search NCBI for genes of interest, based on concept-keyword search.
 
 optional arguments:
   -h, --help            show this help message and exit
+  --version             show program's version number and exit
   --online              Search gene information from online (NCBI).
   --organism ORGANISM   Name of the organism to search
   --email EMAIL_ADDRESS
@@ -181,6 +184,19 @@ optional arguments:
 
 <pre><code>annokey --organism mouse --online --email foo@bar.com --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
 </code></pre>
+
+<h3>
+<a name="required-format-of-input-files" class="anchor" href="#required-format-of-input-files"><span class="octicon octicon-link"></span></a>Required format of input files</h3>
+
+<p>The input file specifying the search terms is in free text format. Each line of the file specifies a search term. Annokey is case sensitive, so the following terms are considered different:</p>
+
+<pre><code>dna repair
+DNA repair
+DNA Repair
+dNA rEpAiR
+</code></pre>
+
+<p>The input file specifying the list of genes is in Comma Separated Format (CSV). Each line of the file specifies an individual gene. There must be one column in the file which specifies the name of the gene. The columns of the file must have headings, and the gene column must be entitled <code>Gene</code>. The file may have zero or more other columns. Additional columns are ignored by Annokey, but will be preserved in the output of the program.</p>
       </section>
     </div>
 
