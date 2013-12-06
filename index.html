@@ -99,11 +99,28 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 <pre><code>genecache
     organism (e.g. human, mouse)
         hash_dir (a numbered directory in the range [0,255])
-            gene_name (e.g. MORN1)
-                gene_id (XML file, e.g 79906)
+            gene_name (e.g. PALB2)
+                gene_id (XML file, e.g 79728)
 </code></pre>
 
-<p>At the top level is the genecache directory. This has sub-directories for each organism. This has up to 256 sub-directories numbered 0 to 255. The purpose of these sub-directories is to spread out the stored gene information, so that we don't put all the gene files in one sub-directory. Some computer file systems exhibit poor performance when you put too many files in one directory.  </p>
+<p>At the top level is the genecache directory. This has sub-directories for each organism. This has up to 256 sub-directories numbered 0 to 255. The purpose of these sub-directories is to spread out the stored gene information, so that we don't put all the gene files in one sub-directory. Some computer file systems exhibit poor performance when you put too many files in one directory.</p>
+
+<hr><p><strong>Technical note</strong>: the database records for each gene are stored underneath one of the 256 possible hash directories. The exact hash directory is determined by the formula:</p>
+
+<pre><code>md5(gene_name) % 256
+</code></pre>
+
+<p>where <code>gene_name</code> is the (string) gene name (such as "PALB2"), md5 is a hash function and % is the modulus operator. We are only using md5 as a way to evenly distribute gene names to directories, so we don't care about its cryptographic properties (particularly its known weaknesses). </p>
+
+<p>For example, the entry for PALB2 is calculated as follows:</p>
+
+<pre><code>md5("PALB2") % 256 = 163
+</code></pre>
+
+<p>Which means that PALB2 will be found in genecache/human/163/PALB2/79728. The actual data is stored in the file called 79728, which is in XML format. The number 79728 is the NCBI Gene database ID of the PALB2, which is also reflected in the URL to access the entry in the online database <a href="http://www.ncbi.nlm.nih.gov/gene/79728">http://www.ncbi.nlm.nih.gov/gene/79728</a>.</p>
+
+<hr><h3>
+<a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
       </section>
     </div>
 
