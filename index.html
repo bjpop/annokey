@@ -148,6 +148,23 @@ optional arguments:
                         including name of the gene, one gene name per line.
   --log FILENAME        log progress in FILENAME, defaults to annokey_log.txt
 </code></pre>
+
+<p>Annokey requires two arguments <code>--keys</code> and <code>--genes</code>, which define the search terms and gene list respectively. The remaining arguments are optional. </p>
+
+<p>Annokey's default mode is to use local "offline" search in a cached copy of the NCBI Gene database. For example, if the file <code>keys.txt</code> contains a list of search terms (one term per line in free text format) and the file <code>genes.txt</code> contains the gene information (one gene per line in CSV format), then the following command is sufficient to perform a search:</p>
+
+<pre><code>annokey --keys keys.txt --genes genes.csv
+</code></pre>
+
+<p>Annokey produces a new gene file on standard output, which you will normally want to redirect to a file:</p>
+
+<pre><code>annokey --keys keys.txt --genes genes.csv &gt; annotated_genes.csv
+</code></pre>
+
+<p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. By default this is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
+
+<pre><code>annokey --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
+</code></pre>
       </section>
     </div>
 
