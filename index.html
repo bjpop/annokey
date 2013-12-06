@@ -34,7 +34,7 @@
         <h3>
 <a name="introduction" class="anchor" href="#introduction"><span class="octicon octicon-link"></span></a>Introduction</h3>
 
-<p>Annokey is a tool for annotating gene lists with the results of a keyword search of the NCBI gene database and linked Pubmed article information. Its purpose is to help users prioritise genetic mutations ordered by relevance to a domain of interest, such as "breast cancer" or "DNA repair pathways" etcetera. The user steers the search by specifying a ranked list of keywords and phrases that are likely to be highly correlated with their domain of interest.</p>
+<p>Annokey is a tool for annotating gene lists with the results of a keyword search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genetic mutations ordered by relevance to a domain of interest, such as "breast cancer" or "DNA repair pathways" etcetera. The user steers the search by specifying a ranked list of keywords and phrases that are likely to be highly correlated with their domain of interest.</p>
 
 <p>Annokey's main inputs are:</p>
 
@@ -164,6 +164,21 @@ optional arguments:
 <p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. By default this is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
 
 <pre><code>annokey --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
+</code></pre>
+
+<p>One of the more useful aspects of the log file is that it records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
+
+<p>The effectiveness of offline search depends greatly on the status of your local cache of the NCBI gene database.</p>
+
+<p>Alternatively, Annokey can be made to perform an online search with the <code>--online</code> argument. This argument also requires you to specify an email address (as per requirements of the NCBI Gene database):</p>
+
+<p>annokey --online --email <a href="mailto:foo@bar.com">foo@bar.com</a> --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv</p>
+
+<p>Obviously you should use a real email address instead of <code>foo@bar.com</code>.</p>
+
+<p>By default Annokey uses the human version of the NCBI Gene database, but you can specify an alternative organism with the <code>--organism</code> argument:</p>
+
+<pre><code>annokey --organism mouse --online --email foo@bar.com --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
 </code></pre>
       </section>
     </div>
