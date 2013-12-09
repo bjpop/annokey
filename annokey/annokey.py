@@ -49,8 +49,11 @@ from StringIO import StringIO
 import itertools
 import cPickle as pickle
 import logging
-
+import hashlib
 from process_xml import GeneParser, Hit
+from version import annokey_version
+
+DEFAULT_LOG_FILE = 'annokey_log.txt'
 
 
 #NCBI access rate limit
@@ -82,28 +85,6 @@ from process_xml import GeneParser, Hit
 #and email and that violate the above usage policies may be blocked. Software
 #developers may register values of tool and email at any time, and are
 #encouraged to do so.
-
-
-'''
-def genefile_reader(csvfile):
-    # try to detect the csv format from the (up to)
-    # first three lines of the file
-    sample = ''
-    for n, line in enumerate(csvfile):
-        if n >= 3:
-            break
-        else:
-            sample += line 
-    sniffer = csv.Sniffer()
-    dialect = sniffer.sniff(sample)
-    csvfile.seek(0)
-    reader = csv.reader(csvfile, dialect)
-    if sniffer.has_header:
-        header = next(reader)
-    else:
-        header = None
-    return header, reader, dialect
-'''
 
 
 # read each gene name from the gene file
@@ -144,7 +125,6 @@ def get_pubmed_ids(args):
     pubmed_ids = set()
     
     with open(args.genes) as genesfile:
-        #header, reader, dialect = genefile_reader(genesfile)
         reader = csv.DictReader(genesfile)
         for row in reader:
             genename = row['Gene'].strip()
@@ -154,36 +134,37 @@ def get_pubmed_ids(args):
     return pubmed_ids
 
 
-def fetch_and_save_pubmed_records(cachedir, organism, ids):
+def fetch_and_save_pubmed_records(cachedir, ids):
     # XXX Fetch all records here regardless of existing pubmed cache.
     # We may be able to skip the records that already exist if
     # the records are not updated.
     # XXX As the number of pubmed ids is usually large,
     # save XML file in cache right after fetching them.
-    idString = ','.join(ids)
-    postRequest = Entrez.epost(db='pubmed', id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    retstart = 0
-    chunk_size = 10000
+    if len(ids) > 0:
+        idString = ','.join(ids)
+        postRequest = Entrez.epost(db='pubmed', id=idString)
+        postResult = Entrez.read(postRequest)
+        webEnv = postResult['WebEnv']
+        queryKey = postResult['QueryKey']
+        retstart = 0
+        chunk_size = 10000
 
-    while retstart < len(ids):
-        try:
-            fetch_request = Entrez.efetch(db='pubmed',
-                                          webenv=webEnv,
-                                          query_key=queryKey,
-                                          retmode='xml',
-                                          retmax=chunk_size,
-                                          retstart=retstart)
-            pubmed_result = fetch_request.read()
-        # XXX What should we do on exception? Try again? Sleep? Quit?
-        except Exception as e:
-            print("fetch failed with: {} {}".format(e, type(e)))
-            break
+        while retstart < len(ids):
+            try:
+                fetch_request = Entrez.efetch(db='pubmed',
+                                              webenv=webEnv,
+                                              query_key=queryKey,
+                                              retmode='xml',
+                                              retmax=chunk_size,
+                                              retstart=retstart)
+                pubmed_result = fetch_request.read()
+            # XXX What should we do on exception? Try again? Sleep? Quit?
+            except Exception as e:
+                print("fetch failed with: {} {}".format(e, type(e)))
+                break
 
-        save_pubmed_cache(cachedir, pubmed_result)
-        retstart += chunk_size
+            save_pubmed_cache(cachedir, pubmed_result)
+            retstart += chunk_size
 
 
 def lookup_pubmed_ids(ids):
@@ -272,7 +253,6 @@ def merge_geneContent(geneContent, values):
     for key, value in values:
         geneContent[key] += value 
     return geneContent
-#        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
 
 
 def search_keywords(args):
@@ -326,71 +306,22 @@ def lookup_gene_cache_iter(args, gene_name):
         yield file
         file.close()
 
-
-#def search_keywords_inDict(dbEntry, keywords):
-#    '''Search top N ranking keywords from dbEntry.
-#       dbEntry is a dictionary which contains information of each field.
-#       The value of each key is a list.
-#       e.g) {'AlterName' : ['abc', 'def'], ...}
-#       Returns a list of tuples containging
-#                         the keyword hitted,
-#                         the rank of keyword, and
-#                         the fields where the keyword hitted.
-#    '''
-#    keysFound = []
-#    fields = []
-#    for n, keyword in enumerate(keywords):
-#        for field, content in dbEntry.iteritems():
-#            if field == 'GeneRIFs':
-#                hit = [keyword in item for item in content]
-#                if sum(hit) > 0:
-#                    fields.append('%s(%s/%s)' %
-#                                  (field, sum(hit), len(content)))
-#            else:
-#                for item in content:
-#                    if keyword in item and field not in fields:
-#                        fields.append(field)
-#        if len(fields) > 0:
-#            keysFound.append((keyword, n+1, fields))
-#            fields = []
-#
-#    return keysFound
-#
-#
-#def search_keywords_inPubMed(pubmedContent, keywords):
-#    '''Search keywords from pubmedContent.'''
-#    # Only interested in article title and abstract
-#    content = ''
-#    try:
-#        content += pubmedContent['Article Title']
-#        content += ';' + pubmedContent['Abstract']
-#    except KeyError:
-#        pass
-#
-#    return search_keywords_inString(content, keywords)
-#
-#
-#def search_keywords_inString(dbEntry, keywords):
-#    '''Searche keyword in the order (according to the rank) and
-#       return the keyword and its rank (position in the list).
-#       If fail to search, (python) returns None.
-#       dbEntry is a string.
-#    '''
-#    keysFound = []
-#    for n, item in enumerate(keywords):
-#        if item in dbEntry:
-#            keysFound.append((item, n+1))
-#    return keysFound
-
+def stable_string_hash(str):
+    '''A hash function for strings based on MD5 hashing which should be stable
+    across Python implementations, unlike the built-in hash function. It doesn't
+    matter if this is slow because we don't call it often.'''
+    return int(hashlib.md5(str).hexdigest(), 16)
 
 def make_pubmed_cache_dirname(cachedir, pubmed_id):
-    hash_dir = hash(pubmed_id) % 256
+    hash_dir = stable_string_hash(pubmed_id) % 256
     return os.path.join(cachedir, str(hash_dir))
 
 def make_gene_cache_dirname(cachedir, organism, gene_name):
-    organism_cache_dir = os.path.join(cachedir, organism, 'gene')
-    hash_dir = hash(gene_name) % 256
-    return os.path.join(organism_cache_dir, str(hash_dir), gene_name)
+    # we normalise the gene name to upper case.
+    gene_name_upper = gene_name.upper()
+    organism_cache_dir = os.path.join(cachedir, organism)
+    hash_dir = stable_string_hash(gene_name_upper) % 256
+    return os.path.join(organism_cache_dir, str(hash_dir), gene_name_upper)
 
 def save_pubmed_cache(cachedir, pubmed_records_xml):
     # Read each "PubMedArticle" record in the input XML and 
@@ -468,12 +399,15 @@ def fetch_records(args):
     pubmed_ids = get_pubmed_ids(args)
     # fetch the corresponding XML records for pubmed ids
     # cache the pubmed records
-    fetch_and_save_pubmed_records(args.pubmedcache, args.organism, pubmed_ids)
+    fetch_and_save_pubmed_records(args.pubmedcache, pubmed_ids)
 
 
 def parse_args():
     parser = ArgumentParser(description='Search NCBI for genes of interest, '
                                         'based on concept-keyword search.')
+
+    parser.add_argument(
+        '--version', action='version', version='%(prog)s ' + annokey_version)
 
     parser.add_argument('--online',
                         action='store_true',
@@ -520,8 +454,9 @@ def parse_args():
                              'the gene information including '
                              'name of the gene, one gene name per line.')
 
-    parser.add_argument('--log', metavar='FILENAME', type=str, required=True,
-                        help='log progress in FILENAME')
+    parser.add_argument('--log', metavar='FILENAME', type=str,
+                        help='log progress in FILENAME, defaults to {}'.format(DEFAULT_LOG_FILE),
+                        default=DEFAULT_LOG_FILE)
 
 
     return parser.parse_args()
@@ -529,7 +464,8 @@ def parse_args():
 def main():
     args = parse_args()
 
-    logging.basicConfig(filename=args.log,
+    if args.log:
+        logging.basicConfig(filename=args.log,
                         level=logging.DEBUG,
                         filemode='w',
                         format='%(asctime)s %(message)s',
