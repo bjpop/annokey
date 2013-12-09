@@ -8,7 +8,7 @@ setup(
     author='Bernie Pope',
     author_email='bjpope@unimelb.edu.au',
     packages=['annokey'],
-    scripts=['genetoxml.py'],
+    scripts=['annokey/genetoxml.py'],
     entry_points={
         'console_scripts': ['annokey = annokey.annokey:main']
     },
