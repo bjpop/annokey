@@ -202,6 +202,21 @@ dNA rEpAiR
 </code></pre>
 
 <p>The input file specifying the list of genes is in Comma Separated Format (CSV). Each line of the file specifies an individual gene. There must be one column in the file which specifies the name of the gene. The columns of the file must have headings, and the gene column must be entitled <code>Gene</code>. The file may have zero or more other columns. Additional columns are ignored by Annokey, but will be preserved in the output of the program.</p>
+
+<h4>
+<a name="format-of-the-input-genes-file" class="anchor" href="#format-of-the-input-genes-file"><span class="octicon octicon-link"></span></a>Format of the input genes file</h4>
+
+<p>The <code>--genes</code> command line argument specifies the name of the input genes file. The format of the file is quite flexible, but a few constraints must be satisfied. The first row of the file must be a heading row, and exactly one of the headings must be the word 'Gene'. If there are multiple columns in the file then they can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
+
+<pre><code>annokey --keys keys.txt --genes mygenes.txt --delimiter comma
+</code></pre>
+
+<p>or</p>
+
+<pre><code>annokey --keys keys.txt --genes mygenes.txt --delimiter tab
+</code></pre>
+
+<p>The relative order of the columns in the genes file does not matter, as long as one of them contains the names of genes, and that same column has "Gene" as its heading. Annokey will ignore the other columns, but it will preserve them in the output, in their same relative position.</p>
       </section>
     </div>
 
