@@ -128,9 +128,10 @@ BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary
 
 <p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
 
-<pre><code>usage: annokey [-h] [--online] [--organism ORGANISM] [--email EMAIL_ADDRESS]
-               [--genecache DIR] [--pubmedcache DIR] --keys FILE --genes FILE
-               [--log FILENAME]
+<pre><code>usage: annokey [-h] [--version] [--online] [--organism ORGANISM]
+               [--email EMAIL_ADDRESS] [--genecache DIR] [--pubmedcache DIR]
+               --keys FILE --genes FILE [--log FILENAME]
+               [--delimiter {comma,tab}]
 
 Search NCBI for genes of interest, based on concept-keyword search.
 
@@ -152,6 +153,8 @@ optional arguments:
   --genes FILE          The tab separated file containing the gene information
                         including name of the gene, one gene name per line.
   --log FILENAME        log progress in FILENAME, defaults to annokey_log.txt
+  --delimiter {comma,tab}
+                        delimiter for gene file
 </code></pre>
 
 <p>Annokey requires two arguments <code>--keys</code> and <code>--genes</code>, which define the search terms and gene list respectively. The remaining arguments are optional. </p>
