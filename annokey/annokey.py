@@ -55,6 +55,10 @@ from version import annokey_version
 
 DEFAULT_LOG_FILE = 'annokey_log.txt'
 
+# character used to separate fields in the genes input file.
+# Can be a comma or a tab.
+DEFAULT_GENE_DELIMITER = ','
+
 
 #NCBI access rate limit
 #http://www.ncbi.nlm.nih.gov/books/NBK25497/
@@ -88,19 +92,19 @@ DEFAULT_LOG_FILE = 'annokey_log.txt'
 
 
 # read each gene name from the gene file
-def get_gene_names(genefilename):
+def get_gene_names(args, genefilename):
     with open(genefilename, 'rb') as file:
-        reader = csv.DictReader(file)
+        reader = csv.DictReader(file, delimiter=args.delimiter)
         for row in reader:
             name = row['Gene'].strip()
             yield name
 
 
-def get_gene_ids(genefilename, organism='Homo sapiens'):
+def get_gene_ids(args, genefilename, organism='Homo sapiens'):
 
     def chunk_gene_names(genefilename, chunk_size):
         names = []
-        numbered_gene_names = enumerate(get_gene_names(genefilename))
+        numbered_gene_names = enumerate(get_gene_names(args, genefilename))
         for n, name in numbered_gene_names:
             names.append(name.strip())
             if (n+1) % chunk_size == 0:
@@ -125,7 +129,7 @@ def get_pubmed_ids(args):
     pubmed_ids = set()
     
     with open(args.genes) as genesfile:
-        reader = csv.DictReader(genesfile)
+        reader = csv.DictReader(genesfile, delimiter=args.delimiter)
         for row in reader:
             genename = row['Gene'].strip()
             for gene_xml in lookup_gene_cache_iter(args, genename):
@@ -266,8 +270,8 @@ def search_keywords(args):
 
     if len(keywords) > 0:
         with open(args.genes) as genesfile:
-            reader = csv.DictReader(genesfile)
-            writer = csv.writer(sys.stdout)
+            reader = csv.DictReader(genesfile, delimiter=args.delimiter)
+            writer = csv.writer(sys.stdout, delimiter=args.delimiter)
             # preserve the header from the original gene file
             new_header = reader.fieldnames + ['Annokey_annotation']
             writer.writerow(new_header)
@@ -275,10 +279,14 @@ def search_keywords(args):
             # print the row out with the hits annoated on the end
             #hits = []
             for input_row in reader:
-                genename = input_row['Gene'].strip()
-                hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
-                output_row = [input_row[field] for field in reader.fieldnames]
-                writer.writerow(output_row + hits)
+                try:
+                    genename = input_row['Gene'].strip()
+                except KeyError:
+                    exit("Can't find Gene column in input gene file")
+                else:
+                    hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
+                    output_row = [input_row[field] for field in reader.fieldnames]
+                    writer.writerow(output_row + hits)
 
 
 # Search for each keyword in the XML file for a gene. A hit is yielded for
@@ -388,7 +396,7 @@ def fetch_records(args):
     # fetch gene records and pubmed records and save them in cache.
 
     # read each gene name from the gene file 
-    gene_ids = get_gene_ids(args.genes, args.organism)
+    gene_ids = get_gene_ids(args, args.genes, args.organism)
     # fetch the corresponding XML records for the identified genes
     gene_records_xml = fetch_records_from_ids(gene_ids)
     # Cache the gene entries in the XML file
@@ -458,8 +466,27 @@ def parse_args():
                         help='log progress in FILENAME, defaults to {}'.format(DEFAULT_LOG_FILE),
                         default=DEFAULT_LOG_FILE)
 
+    parser.add_argument('--delimiter', type=str,
+                        choices=['comma', 'tab'],
+                        help='delimiter for gene file')
 
     return parser.parse_args()
+
+
+def get_gene_delimiter(args):
+    if args.delimiter == 'comma':
+        return ','
+    elif args.delimiter == 'tab':
+        return '\t'
+    elif args.genes.endswith('.csv'):
+        return ','
+    elif args.genes.endswith('.tsv'):
+        return '\t'
+    else:
+        logging.info("Using '{}' for delimiter in genes input file"
+                     .format(DEFAULT_GENE_DELIMITER))
+        return DEFAULT_GENE_DELIMITER
+
 
 def main():
     args = parse_args()
@@ -473,9 +500,10 @@ def main():
     logging.info('program started')
     logging.info('command line: {0}'.format(' '.join(sys.argv)))
 
+    args.delimiter = get_gene_delimiter(args)
+
     if args.online:
         # Get gene information online.
-
         if args.email:
             Entrez.email = args.email
         else:
@@ -487,5 +515,5 @@ def main():
     # Get gene information from cache.
     search_keywords(args)
 
-#if __name__ == '__main__':
-#    main()
+if __name__ == '__main__':
+    main()
