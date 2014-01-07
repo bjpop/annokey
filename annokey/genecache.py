@@ -31,32 +31,38 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
     hash_dir = stable_string_hash(gene_name_upper) % 256
     return os.path.join(organism_cache_dir, str(hash_dir), gene_name_upper)
 
-def save_gene_cache(cachedir, organism, gene_records_xml):
+def save_gene_cache(cachedir, organism, xml_file):
 
     # read each "Entrezgene" record in the input XML and write it out to
     # a cache file. Sometimes one gene will have multiple entries. We store
     # each gene entry in a file based on its database ID.
-    parser = etree.iterparse(StringIO(gene_records_xml), events=('end',), tag='Entrezgene')
+    #parser = etree.iterparse(StringIO(gene_records_xml), events=('end',), tag='Entrezgene')
+    parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
 
     for event, elem in parser:
         # find the official name of the gene
-        gene_name = elem.find('.//Gene-ref_locus').text
-        # find the database id of the gene
-        gene_id = elem.find('.//Gene-track_geneid').text
-        # hash the name of the gene into an integer in the range [0, 255]
-        #hash_dir = hash(gene_name) % 256
-        # if it doesn't already exist, create a directory in the cache for
-        # this gene
-        #gene_cache_dir = os.path.join(organism_cache_dir, str(hash_dir), gene_name)
-        gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
-        if not os.path.exists(gene_cache_dir):
-            os.makedirs(gene_cache_dir)
-        # Write a single 'Entrezgene' entry to a file in the cache using the
-        # database ID for the file name
-        gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
-        with open(gene_cache_filename, 'w') as cache_file:
-            cache_file.write(etree.tostring(elem))
-        # free up memory used by the XML iterative parser
-        elem.clear()
-        while elem.getprevious() is not None:
-            del elem.getparent()[0]
+        gene_name_element = elem.find('.//Gene-ref_locus')
+        if gene_name_element is not None:
+            gene_name = gene_name_element.text
+            print("found {}".format(gene_name))
+            # find the database id of the gene
+            gene_id = elem.find('.//Gene-track_geneid').text
+            # hash the name of the gene into an integer in the range [0, 255]
+            #hash_dir = hash(gene_name) % 256
+            # if it doesn't already exist, create a directory in the cache for
+            # this gene
+            #gene_cache_dir = os.path.join(organism_cache_dir, str(hash_dir), gene_name)
+            gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
+            if not os.path.exists(gene_cache_dir):
+                os.makedirs(gene_cache_dir)
+            # Write a single 'Entrezgene' entry to a file in the cache using the
+            # database ID for the file name
+            gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
+            with open(gene_cache_filename, 'w') as cache_file:
+                cache_file.write(etree.tostring(elem))
+            # free up memory used by the XML iterative parser
+            elem.clear()
+            while elem.getprevious() is not None:
+                del elem.getparent()[0]
+        else:
+            print("skipping item")

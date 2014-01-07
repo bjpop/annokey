@@ -335,7 +335,7 @@ def fetch_records(args):
     # fetch the corresponding XML records for the identified genes
     gene_records_xml = fetch_records_from_ids(gene_ids)
     # Cache the gene entries in the XML file
-    save_gene_cache(args.genecache, args.organism, gene_records_xml)
+    save_gene_cache(args.genecache, args.organism, StringIO(gene_records_xml))
 
     # pubmed records
     # get pubmed ids from each gene records
@@ -355,6 +355,11 @@ def parse_args():
     parser.add_argument('--online',
                         action='store_true',
                         help='Search gene information from online (NCBI).')
+
+    parser.add_argument('--xml',
+                        metavar='FILE',
+                        type=str,
+                        help='Populate gene information from downloaded XML dump of NCBI gene database')
 
     parser.add_argument('--organism',
                         type=str,
@@ -437,7 +442,13 @@ def main():
 
     args.delimiter = get_gene_delimiter(args)
 
-    if args.online:
+    if args.xml:
+        # Get gene information from specified XML file.
+        # Populate the genecache from the contents of the file. 
+        with open(args.xml) as xml_file:
+            save_gene_cache(args.genecache, args.organism, xml_file)
+
+    elif args.online:
         # Get gene information online.
         if args.email:
             Entrez.email = args.email
