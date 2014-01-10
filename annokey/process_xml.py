@@ -1,5 +1,3 @@
-#!/bin/env python
-
 '''
 --------------------------------------------------------------------------------
 
@@ -30,7 +28,8 @@ class Hit(object):
         self.database_record_id = database_record_id # int
 
     def __str__(self):
-        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(self.keyword, self.rank, self.database_record_id, ';'.join(self.fields))
+        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(
+            self.keyword,self.rank, self.database_record_id, ';'.join(self.fields))
 
 
 class GeneParser(object):

@@ -260,10 +260,40 @@ def merge_geneContent(geneContent, values):
     return geneContent
 
 
+def summarise_hits(hits):
+    '''Given a list of hits from a keyword search, generate a list with
+    the following three things:
+
+      1. highest ranked hit
+      2. all the terms that were in hits
+      3. all the fields where the terms were found
+    '''
+
+    ranks = []
+    terms = set()
+    fields = set()
+
+    for h in hits:
+        ranks.append(h.rank)
+        terms.add(h.keyword)
+        for f in h.fields:
+            fields.add(f)
+
+    if len(ranks) > 0:
+        highest_rank = str(sorted(ranks)[0])
+    else:
+        highest_rank = ''
+
+    all_terms = ';'.join([t.strip() for t in terms])
+    all_fields = ';'.join([f.strip() for f in fields])
+
+    return [highest_rank, all_terms, all_fields]
+
+
 def search_keywords(args):
 
     # build a list of all the keywords in the order that they
-    # appear in the keywords file
+    # appear in the keywords file (rank order)
     keywords = []
     with open(args.keys) as keysfile:
         for line in keysfile:
@@ -274,20 +304,22 @@ def search_keywords(args):
             reader = csv.DictReader(genesfile, delimiter=args.delimiter)
             writer = csv.writer(sys.stdout, delimiter=args.delimiter)
             # preserve the header from the original gene file
-            new_header = reader.fieldnames + ['Annokey_annotation']
+            annokey_headers = ['Highest Ranked Match', 'Matched Terms', 'Fields']
+            new_header = reader.fieldnames + annokey_headers 
             writer.writerow(new_header)
             # for each row in the genes file, find hits for the gene
             # print the row out with the hits annoated on the end
-            #hits = []
             for input_row in reader:
                 try:
                     genename = input_row['Gene'].strip()
                 except KeyError:
                     exit("Can't find Gene column in input gene file")
                 else:
-                    hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
+                    # hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
+                    hits = list(search_keywords_gene_iter(args, genename, keywords))
+                    hits_output = summarise_hits(hits) 
                     output_row = [input_row[field] for field in reader.fieldnames]
-                    writer.writerow(output_row + hits)
+                    writer.writerow(output_row + hits_output)
 
 
 # Search for each keyword in the XML file for a gene. A hit is yielded for
@@ -437,7 +469,6 @@ def main():
                         filemode='w',
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S')
-    logging.info('program started')
     logging.info('command line: {0}'.format(' '.join(sys.argv)))
 
     args.delimiter = get_gene_delimiter(args)

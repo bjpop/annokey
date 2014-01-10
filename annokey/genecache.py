@@ -4,6 +4,7 @@ from lxml import etree
 from StringIO import StringIO
 import os
 import hashlib
+import logging
 
 def lookup_gene_cache_iter(args, gene_name):
     gene_cache_dir = make_gene_cache_dirname(args.genecache, args.organism, gene_name)
@@ -44,7 +45,6 @@ def save_gene_cache(cachedir, organism, xml_file):
         gene_name_element = elem.find('.//Gene-ref_locus')
         if gene_name_element is not None:
             gene_name = gene_name_element.text
-            print("found {}".format(gene_name))
             # find the database id of the gene
             gene_id = elem.find('.//Gene-track_geneid').text
             # hash the name of the gene into an integer in the range [0, 255]
