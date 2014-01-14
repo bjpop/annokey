@@ -21,39 +21,39 @@ import itertools
 
 
 class Hit(object):
-    def __init__(self, keyword, rank, database_record_id, fields):
-        self.keyword = keyword # string
+    def __init__(self, search_term, rank, database_record_id, fields):
+        self.search_term = search_term # string
         self.rank = rank # int
         self.fields = fields # [string]
         self.database_record_id = database_record_id # int
 
     def __str__(self):
         return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(
-            self.keyword,self.rank, self.database_record_id, ';'.join(self.fields))
+            self.search_term,self.rank, self.database_record_id, ';'.join(self.fields))
 
 
 class GeneParser(object):
     
     @staticmethod
-    def keyword_hit(xmlfile, keywords, pubmed_cachedir):
+    def term_hit(xmlfile, search_terms, pubmed_cachedir):
         # parse given xmlfile and extract what we are interested in.
-        # look up keywords from extracted content of gene.
+        # look up search_terms from extracted content of gene.
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
         for event, geneEntry in parser:
             # XXX We use intermidiate Dictionary at the moment rather than
             # scanning XML file directly, since iterating dictionary N times
             # may be faster than scanning XML file N times when
-            # there are N keywords.
+            # there are N search_terms.
             geneId, content = get_geneContent(geneEntry)
-            pubmed_hits = search_keywords_in_pubmed(pubmed_cachedir, content["PmIds"], keywords, geneId)
-            for hit in search_keywords_inDict(content, keywords, geneId):
-                # If keyword is also in PubMed, append PubMed to field.
-                if hit.keyword in pubmed_hits:
-                    hit.fields += pubmed_hits[hit.keyword].fields
-                    del pubmed_hits[hit.keyword]
+            pubmed_hits = search_terms_in_pubmed(pubmed_cachedir, content["PmIds"], search_terms, geneId)
+            for hit in search_terms_inDict(content, search_terms, geneId):
+                # If search_term is also in PubMed, append PubMed to field.
+                if hit.search_term in pubmed_hits:
+                    hit.fields += pubmed_hits[hit.search_term].fields
+                    del pubmed_hits[hit.search_term]
                 yield hit
             # For the remaining PubMed hits
-            for keyword, hit in pubmed_hits.iteritems():
+            for search_term, hit in pubmed_hits.iteritems():
                 yield hit
 
     @staticmethod
@@ -74,65 +74,65 @@ class GeneParser(object):
 class PubMedParser(object):
 
     @staticmethod
-    def keyword_hit(xmlfile, keywords):
-        # Parse the given xmlfile and return keywords hit.
+    def term_hit(xmlfile, search_terms):
+        # Parse the given xmlfile and return search_terms hit.
         parser = etree.iterparse(xmlfile, events=('end',), tag='PubmedArticle')
         for event, pubmed_entry in parser:
             content =  get_pubmed_content(pubmed_entry)
-            # scan title and abstract only for keyword search.
+            # scan title and abstract only for search_term search.
             title_abst = ''
             try:
                 title_abst += content['Article Title']
                 title_abst += content['Abstract']
             except KeyError:
                 pass
-            keysHit = []
-            for keyword in keywords:
-                if keyword in title_abst:
-                    keysHit.append(keyword)
-            return keysHit
+            termsHit = []
+            for search_term in search_terms:
+                if search_term in title_abst:
+                    termsHit.append(search_term)
+            return termsHit
 
 
-# For caching PubMed keyword search history
+# For caching PubMed search_term search history
 pubmed_hit_cache = {}
 
-# Search keywords in PubMed articles. Return a list of Hit.
+# Search search_terms in PubMed articles. Return a list of Hit.
 # We manange pubmed_hit_cache to avoid repeated cache lookup. 
-def search_keywords_in_pubmed(cachedir, ids, keywords, gene_id):
-    keyword_hits = {}
+def search_terms_in_pubmed(cachedir, ids, search_terms, gene_id):
+    search_term_hits = {}
     for id in ids:
         # For each PubMed article, look up hit history first,
         # If no history in hit cache, look up PubMed file.
-        keyword_hit = []
+        search_term_hit = []
         try:
-            keyword_hit = pubmed_hit_cache[id]
+            search_term_hit = pubmed_hit_cache[id]
         except KeyError:
             pubmed_file = lookup_pubmed_cache(cachedir, id)
             if pubmed_file is not None:
-                keyword_hit = PubMedParser.keyword_hit(pubmed_file, keywords)
-                pubmed_hit_cache[id] = keyword_hit
+                search_term_hit = PubMedParser.term_hit(pubmed_file, search_terms)
+                pubmed_hit_cache[id] = search_term_hit
             else:
                 pass
                 # XXX maybe should log an error
                 #print("did not find PubMed {} in cache:".format(id))
 
         # Increase hit counts.
-        for keyword in keyword_hit:
+        for search_term in search_term_hit:
             try:
-                keyword_hits[keyword] += 1
+                search_term_hits[search_term] += 1
             except KeyError:
-                keyword_hits[keyword] = 1
+                search_term_hits[search_term] = 1
 
     # Make a list of Hit
-    for n, keyword in enumerate(keywords):
-        # XXX there are duplicated keywords with different ranks.
+    for n, search_term in enumerate(search_terms):
+        # XXX there are duplicated search_terms with different ranks.
         # So, we need to check the count is int or not.
-        if keyword in keyword_hits:
-            count = keyword_hits[keyword]
+        if search_term in search_term_hits:
+            count = search_term_hits[search_term]
             if isinstance(count, int):
-                field = ["PMID({}/{})".format(keyword_hits[keyword], len(ids))]
-                keyword_hits[keyword] = Hit(keyword, n+1, gene_id, field)
-    return keyword_hits
+                field = ["PMID({}/{})".format(search_term_hits[search_term], len(ids))]
+                search_term_hits[search_term] = Hit(search_term, n+1, gene_id, field)
+    return search_term_hits
 
 
 def lookup_pubmed_cache(cachedir, id):
@@ -283,22 +283,6 @@ def get_pubmed_content(pubmedEntry):
                 pubmedContent['Abstract'] = abstractText
     return pubmedContent
 
-# XXX need to update
-# gene Id = 'Entrezgene_track-info/Gene-track/Gene-track_geneid'
-# gene name = 'Entrezgene_gene/Gene-ref/Gene-ref_locus'
-# gene synonyms = 'Entrezgene_gene/Gene-ref/Gene-ref_syn'
-# gene name(description) = 'Entrezgene_gene/Gene-ref/Gene-ref_desc'
-# gene alter name = 'Entrezgene_prot/Prot-ref/Prot-ref_name'
-# summary = 'Entrezgene_summary'
-# gene RIFs = 'Entrezgene_comments', key==Gene-commentary_text
-# function
-# component
-# process
-# pathway = 'Entrezgene_comments/Gene-commentary_comment/Gene-commentary_text'
-# interaction
-# conserved
-# PubMed Id
-
 
 def merge_geneContent(geneContent, values):
     '''Merge gene information.
@@ -312,8 +296,8 @@ def merge_geneContent(geneContent, values):
          A dict containing gene information.
     '''
 
-    for key, value in values:
-        geneContent[key] += value 
+    for term, value in values:
+        geneContent[term] += value 
     return geneContent
 
 
@@ -501,234 +485,41 @@ def get_geneContent(geneEntry):
     return (geneId, geneContent)
 
 
-
-#    def get_keyword_hits_from_pubmed(pmIds):
-#        '''Return pubmed_hits'''
-#        pubmed_hit = {}
-#        for pubmed_content in lookup_pubmed_ids(pmIds):
-#            keywords_found = search_keywords_inPubMed(pubmed_content, keywords)
-#            pubmed_hit[pubmed_content['PMID']] = keywords_found
-#        return pubmed_hit
-#
-#    def get_keyword_hits_from_genexml(genefilename):
-#        '''Return gene_searched and total PMIDs'''
-#        genes_searched = {}
-#        pmIds = set()
-#        geneNames = []
-#        # Read genes and extract gene names which we want to find.
-#        for name, func, info in read_gene_file(genefilename):
-#            if func != 'intergenic':
-#                geneNames.append(name)
-#
-#        content = etree.iterparse(genexmlfile, events=('end',), tag='Entrezgene')
-#        for event, geneEntry in content:
-#            # Get gene name of geneEntry, and
-#            # if the gene name is on the list of gene names which
-#            # are in gene file, parse the gene content from xml and
-#            # search keywords over the parsed content.
-#            geneName = get_geneName(geneEntry)
-#            if geneName in geneNames:
-#                dbEntry = get_geneContent(geneEntry)
-#                searchResult = search_keywords_inDict(dbEntry, keywords)
-#                if geneName in genes_searched:
-#                    record = genes_searched[geneName]
-#                    record['keywordHit'] += searchResult
-#                    # XXX this should be a set
-#                    record['PmIds'] += make_unique_list(dbEntry['PmIds'])
-#                else:
-#                    results = {}
-#                    results['keywordHit'] = searchResult
-#                    results['PmIds'] = make_unique_list(dbEntry['PmIds'])
-#                    genes_searched[geneName] = results
-#                pmIds.update(results['PmIds'])
-#            # Clear node references
-#            geneEntry.clear()
-#            while geneEntry.getprevious() is not None:
-#                del geneEntry.getparent()[0]
-#        del content
-#        return genes_searched, pmIds
-#
-#
-#    def merge_gene_and_pubmed_hits(genes_searched, pubmed_hit):
-#        '''Return genes_searched including pubmed_hits'''
-#        # Match gene and pubmed
-#        for gene, info_searched in genes_searched.iteritems():
-#            gene_pubmed_hit = {}
-#            gene_keyword_hit = info_searched['keywordHit']
-#            gene_pmids = info_searched['PmIds']
-#            # Find pubmed hit information over all PMIDs related to the gene.
-#            # Count the number of hits of the keyword over all PMIDs.
-#            for pmid in gene_pmids:
-#                try:
-#                    for keyword, rank in pubmed_hit[pmid]:
-#                        if keyword in gene_pubmed_hit:
-#                            rank, count = gene_pubmed_hit[keyword]
-#                            gene_pubmed_hit[keyword] = (rank, count+1)
-#                        else:
-#                            gene_pubmed_hit[keyword] = (rank, 1)
-#                except KeyError:
-#                    pass
-#            # Merge keyword sections if the keyword was also found in PMID.
-#            for n, (keyword, rank, fields) in enumerate(gene_keyword_hit):
-#                if keyword in gene_pubmed_hit:
-#                    rank, count = gene_pubmed_hit[keyword]
-#                    fields.append('PMID(%s/%s)' % (count, len(gene_pmids)))
-#                    gene_keyword_hit[n] = (keyword, rank, fields)
-#                    del gene_pubmed_hit[keyword]
-#            # For the remaining PMID hits, append to keywordHit.
-#            for keyword, (rank, count) in gene_pubmed_hit.items():
-#                fields = ['PMID(%s/%s)' % (count, len(gene_pmids))]
-#                gene_keyword_hit.append((keyword, rank, fields))
-#            # Sort keywordHit according to its rank,
-#            # so we can determine top n rank.
-#            gene_keyword_hit.sort(key=lambda tup: tup[1])
-#            genes_searched[gene]['keywordHit'] = gene_keyword_hit
-#        return genes_searched
-#
-
-    #genes_searched, pmIds = get_keyword_hits_from_genexml(genefilename)
-    #pubmed_hit = get_keyword_hits_from_pubmed(pmIds)
-    #genes_searched = merge_gene_and_pubmed_hits(genes_searched, pubmed_hit)
-    #return genes_searched
-
-
-
-
-#def search_genes(genefilename, keywords, geneDict):
-#    '''Search gene information from geneDict, and
-#       print the results.
-#           genes: csv.DictReader, keywords: list, geneDict: dict
-#       1. searches keywords, and appends results to the original data
-#          ['Keyword,Rank']
-#    '''
-#    column_headers = get_column_headers(genefilename)
-#    if column_headers:
-#        column_headers.append('Keyword,Rank')
-#        print '\t'.join(column_headers)
-#
-#    for name, func, geneInfo in read_gene_file(genefilename, padding=True):
-#        if func == 'intergenic':
-#            geneInfo.append('')
-#            continue
-#        # Search keywords against gene database.
-#        result = ''
-#        try:
-#            dbEntry = geneDict[name]
-#            searchResults = search_keywords_inString(dbEntry, keywords)
-#            if searchResults:
-#                for key, rank in searchResults:
-#                    result += '(%s,%s)' % (key, rank)
-#            else:
-#                # XXX need detail information?
-#                result = ''
-#        except KeyError:
-#            # If DB does not contain the information on gene name.
-#            result = "Could not find '%s' in DB" % name
-#            print(geneDict.keys())
-#            exit()
-#        geneInfo.append(result)
-#        print '\t'.join(geneInfo)
-
-
-def search_keywords_inDict(dbEntry, keywords, geneId):
-    '''Search top N ranking keywords from dbEntry.
+def search_terms_inDict(dbEntry, search_terms, geneId):
+    '''Search top N ranking search_terms from dbEntry.
        dbEntry is a dictionary which contains information of each field.
        The value of each key is a list.
        e.g) {'AlterName' : ['abc', 'def'], ...}
        Returns a list of tuples containging
-                         the keyword hitted,
-                         the rank of keyword, and
-                         the fields where the keyword hitted.
+                         the search_term hitted,
+                         the rank of search_term, and
+                         the fields where the search_term hitted.
     '''
     fields = []
-    for n, keyword in enumerate(keywords):
+    for n, search_term in enumerate(search_terms):
         for field, content in dbEntry.iteritems():
             if field == 'GeneRIFs':
-                hit = [keyword in item for item in content]
+                hit = [search_term in item for item in content]
                 if sum(hit) > 0:
                     fields.append('%s(%s/%s)' %
                                   (field, sum(hit), len(content)))
             else:
                 for item in content:
-                    if keyword in item and field not in fields:
+                    if search_term in item and field not in fields:
                         fields.append(field)
         if len(fields) > 0:
-            yield Hit(keyword, n+1, geneId, fields)
+            yield Hit(search_term, n+1, geneId, fields)
             fields = []
 
 
-def search_keywords_inString(dbEntry, keywords):
-    '''Searche keyword in the order (according to the rank) and
-       return the keyword and its rank (position in the list).
+def search_terms_inString(dbEntry, search_terms):
+    '''Searche search_term in the order (according to the rank) and
+       return the search_term and its rank (position in the list).
        If fail to search, (python) returns None.
        dbEntry is a string.
     '''
-    keysFound = []
-    for n, item in enumerate(keywords):
+    termsFound = []
+    for n, item in enumerate(search_terms):
         if item in dbEntry:
-            keysFound.append((item, n+1))
-    return keysFound
-
-
-def parse_args():
-    parser = ArgumentParser(description='Search NCBI for genes of interest, '
-                                        'based on concept-keyword search.')
-
-    parser.add_argument('--online',
-                        action='store_true',
-                        help='Search gene information from online (NCBI).')
-
-    parser.add_argument('--genecol',
-                        metavar='INT',
-                        type=int,
-                        default=0,
-                        help='The position of the column containing gene name.')
-
-    parser.add_argument('--skipheader',
-                        action='store_true',
-                        help='The first line of the gene file is a header which'
-                             'should be skipped over')
-
-    parser.add_argument('--organism',
-                        type=str,
-                        default='human',
-                        help='Name of the organism to search')
-
-    parser.add_argument('--email',
-                        metavar='EMAIL_ADDRESS',
-                        type=str,
-                        help='Your email address. This is required by'
-                             'NCBI for online queries. You do not need'
-                             'to supply an email address for cached queries.')
-
-    parser.add_argument('--genecache',
-                        metavar='DIR',
-                        type=str,
-                        default='genecache',
-                        help='Save a cache of the downloaded results '
-                             'from NCBI gene into this directory')
-
-    parser.add_argument('--pubmedcache',
-                        metavar='DIR',
-                        type=str,
-                        default='pubmedcache',
-                        help='Save a cache of the downloaded results '
-                             'from NCBI pubmed into this directory')
-
-    parser.add_argument('--keys',
-                        metavar='FILE',
-                        type=str,
-                        required=True,
-                        help='The tab separated file containing '
-                             'the keywords to be searched.')
-
-    parser.add_argument('--genes',
-                        metavar='FILE',
-                        type=str,
-                        required=True,
-                        help='The tab separated file containing '
-                             'the gene information including '
-                             'name of the gene, one gene name per line.')
-
-    return parser.parse_args()
-
+            termsFound.append((item, n+1))
+    return termsFound

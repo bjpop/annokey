@@ -11,29 +11,28 @@ Copyright: 2013
 Website:   https://github.com/bjpop/annokey
 License:   BSD, see LICENCE file in source distribution. 
 
-This program searches NCBI database for genes of interest
-based on concept-keyword search.
+Searches the NCBI gene database for a given set of genes
+and a given set of search terms. 
 
 This program supports both online search and offline search.
 If the option --online is on, this program downloads gene database in xml
-format from the NCBI server and search keywords. The option --saveCache allows
+format from the NCBI server and search terms. The option --saveCache allows
 the downloaded information to be saved int the user's directory.
 
 For offline search, there is the option --loadCache, which
 accepts an xml file for gene information. 
 
 The search results are appended at the end of column of the
-input gene file with the information about the keyword hit,
-the keyword rank, and the section where the keyword hit.
+input gene file with the information about the search-term hit,
+the search-term rank, and the section where the search-term hit.
 
 Required inputs:
 
-    --keys FILENAME   a text file of search keywords/keyphrases. One
-                            term per line.
+    --terms FILENAME   a text file of search-terms. One term per line.
 
-    --genes FILENAME        a text file of gene information, one gene per line.
-                            Format is tab separated. Must contain at least one
-                            column of gene names.
+    --genes FILENAME   a text file of gene information, one gene per line.
+                       Format is tab separated. Must contain at least one
+                       column of gene names.
 
 --------------------------------------------------------------------------------
 '''
@@ -261,7 +260,7 @@ def merge_geneContent(geneContent, values):
 
 
 def summarise_hits(hits):
-    '''Given a list of hits from a keyword search, generate a list with
+    '''Given a list of hits from a search, generate a list with
     the following three things:
 
       1. highest ranked hit
@@ -275,7 +274,7 @@ def summarise_hits(hits):
 
     for h in hits:
         ranks.append(h.rank)
-        terms.add(h.keyword)
+        terms.add(h.search_term)
         for f in h.fields:
             fields.add(f)
 
@@ -290,16 +289,16 @@ def summarise_hits(hits):
     return [highest_rank, all_terms, all_fields]
 
 
-def search_keywords(args, report_page):
+def search_terms(args, report_page):
 
-    # build a list of all the keywords in the order that they
-    # appear in the keywords file (rank order)
-    keywords = []
-    with open(args.keys) as keysfile:
-        for line in keysfile:
-            keywords.append(line.strip())
+    # build a list of all the search-terms in the order that they
+    # appear in the search-terms file (rank order)
+    search_terms = []
+    with open(args.terms) as termsfile:
+        for line in termsfile:
+            search_terms.append(line.strip())
 
-    if len(keywords) > 0:
+    if len(search_terms) > 0:
         with open(args.genes) as genesfile:
             reader = csv.DictReader(genesfile, delimiter=args.delimiter)
             writer = csv.writer(sys.stdout, delimiter=args.delimiter)
@@ -315,22 +314,21 @@ def search_keywords(args, report_page):
                 except KeyError:
                     exit("Can't find Gene column in input gene file")
                 else:
-                    # hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
-                    hits = list(search_keywords_gene_iter(args, genename, keywords))
+                    hits = list(search_terms_gene_iter(args, genename, search_terms))
                     report_hits(genename, hits, report_page)
                     hits_output = summarise_hits(hits) 
                     output_row = [input_row[field] for field in reader.fieldnames]
                     writer.writerow(output_row + hits_output)
 
 
-# Search for each keyword in the XML file for a gene. A hit is yielded for
-# each keyword. If a gene has multiple files, we search each one separately.
-# This means it is possible to get multiple hits for the same keyword
+# Search for each search-term in the XML file for a gene. A hit is yielded for
+# each search-term. If a gene has multiple files, we search each one separately.
+# This means it is possible to get multiple hits for the same search-term 
 # but from different files. XXX we should annotate each hit with the database
 # file ID
-def search_keywords_gene_iter(args, gene_name, keywords):
+def search_terms_gene_iter(args, gene_name, search_terms):
     for gene_xml in lookup_gene_cache_iter(args, gene_name):
-        for hit in GeneParser.keyword_hit(gene_xml, keywords, args.pubmedcache):
+        for hit in GeneParser.term_hit(gene_xml, search_terms, args.pubmedcache):
             yield hit
 
 
@@ -420,12 +418,12 @@ def parse_args():
                         help='Save a cache of the downloaded results '
                              'from NCBI pubmed into this directory')
 
-    parser.add_argument('--keys',
+    parser.add_argument('--terms',
                         metavar='FILE',
                         type=str,
                         required=True,
                         help='The tab separated file containing '
-                             'the keywords to be searched.')
+                             'the search-terms to be searched.')
 
     parser.add_argument('--genes',
                         metavar='FILE',
@@ -497,11 +495,10 @@ def main():
     report_page = init_report_page(command_line_text)
 
     # Get gene information from cache.
-    search_keywords(args, report_page)
+    search_terms(args, report_page)
 
     write_report(args.report, report_page)
 
-    
 
 if __name__ == '__main__':
     main()
