@@ -485,6 +485,7 @@ def get_geneContent(geneEntry):
     return (geneId, geneContent)
 
 
+# XXX performance of this function could be improved
 def search_terms_inDict(dbEntry, search_terms, geneId):
     '''Search top N ranking search_terms from dbEntry.
        dbEntry is a dictionary which contains information of each field.

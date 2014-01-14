@@ -293,12 +293,12 @@ def search_terms(args, report_page):
 
     # build a list of all the search-terms in the order that they
     # appear in the search-terms file (rank order)
-    search_terms = []
+    terms = []
     with open(args.terms) as termsfile:
         for line in termsfile:
-            search_terms.append(line.strip())
+            terms.append(line.strip())
 
-    if len(search_terms) > 0:
+    if len(terms) > 0:
         with open(args.genes) as genesfile:
             reader = csv.DictReader(genesfile, delimiter=args.delimiter)
             writer = csv.writer(sys.stdout, delimiter=args.delimiter)
@@ -314,7 +314,7 @@ def search_terms(args, report_page):
                 except KeyError:
                     exit("Can't find Gene column in input gene file")
                 else:
-                    hits = list(search_terms_gene_iter(args, genename, search_terms))
+                    hits = list(search_terms_gene_iter(args, genename, terms))
                     report_hits(genename, hits, report_page)
                     hits_output = summarise_hits(hits) 
                     output_row = [input_row[field] for field in reader.fieldnames]

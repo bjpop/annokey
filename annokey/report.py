@@ -63,8 +63,9 @@ def report_command_date(page, command_line_text):
     date_item.text(today.strftime('%d %b %Y'))
 
 def report_hits(gene_name, hits, report_page):
-    report_page.h2(gene_name)
+    # don't report a gene if it has no hits
     if len(hits) > 0:
+        report_page.h2(gene_name)
         ncbi_record_id = str(hits[0].database_record_id)
         para = report_page.p
         ncbi_gene_url = NCBI_GENE_ENTRY_URL + ncbi_record_id
