@@ -91,7 +91,7 @@ def report_hits(gene_name, hits, report_page):
             else:
                 row = table.tr
                 alternate_row = True
-            row.td(h.search_term)
+            row.td(h.search_term.term)
             row.td(str(h.rank))
             td = row.td('; '.join(h.fields))
 

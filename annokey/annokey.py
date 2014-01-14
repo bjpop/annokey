@@ -53,6 +53,7 @@ from version import annokey_version
 from genecache import (lookup_gene_cache_iter, stable_string_hash,
     make_gene_cache_dirname, save_gene_cache)
 from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
+from search_term import (parse_search_term)
 
 DEFAULT_LOG_FILE = 'annokey_log.txt'
 
@@ -274,7 +275,7 @@ def summarise_hits(hits):
 
     for h in hits:
         ranks.append(h.rank)
-        terms.add(h.search_term)
+        terms.add(h.search_term.term)
         for f in h.fields:
             fields.add(f)
 
@@ -296,7 +297,7 @@ def search_terms(args, report_page):
     terms = []
     with open(args.terms) as termsfile:
         for line in termsfile:
-            terms.append(line.strip())
+            terms.append(parse_search_term(line))
 
     if len(terms) > 0:
         with open(args.genes) as genesfile:

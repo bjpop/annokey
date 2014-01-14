@@ -88,7 +88,7 @@ class PubMedParser(object):
                 pass
             termsHit = []
             for search_term in search_terms:
-                if search_term in title_abst:
+                if search_term.search(title_abst):
                     termsHit.append(search_term)
             return termsHit
 
@@ -485,7 +485,6 @@ def get_geneContent(geneEntry):
     return (geneId, geneContent)
 
 
-# XXX performance of this function could be improved
 def search_terms_inDict(dbEntry, search_terms, geneId):
     '''Search top N ranking search_terms from dbEntry.
        dbEntry is a dictionary which contains information of each field.
@@ -497,16 +496,17 @@ def search_terms_inDict(dbEntry, search_terms, geneId):
                          the fields where the search_term hitted.
     '''
     fields = []
+    seen_fields = set()
     for n, search_term in enumerate(search_terms):
         for field, content in dbEntry.iteritems():
             if field == 'GeneRIFs':
-                hit = [search_term in item for item in content]
+                hit = [search_term.search(item) for item in content]
                 if sum(hit) > 0:
                     fields.append('%s(%s/%s)' %
                                   (field, sum(hit), len(content)))
             else:
                 for item in content:
-                    if search_term in item and field not in fields:
+                    if search_term.search(item) and field not in fields:
                         fields.append(field)
         if len(fields) > 0:
             yield Hit(search_term, n+1, geneId, fields)
