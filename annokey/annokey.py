@@ -52,14 +52,14 @@ import logging
 from process_xml import GeneParser, Hit
 from version import annokey_version
 from genecache import (lookup_gene_cache_iter, stable_string_hash,
-                      make_gene_cache_dirname, save_gene_cache)
+    make_gene_cache_dirname, save_gene_cache)
+from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
 
 DEFAULT_LOG_FILE = 'annokey_log.txt'
 
 # character used to separate fields in the genes input file.
 # Can be a comma or a tab.
 DEFAULT_GENE_DELIMITER = ','
-
 
 #NCBI access rate limit
 #http://www.ncbi.nlm.nih.gov/books/NBK25497/
@@ -290,7 +290,7 @@ def summarise_hits(hits):
     return [highest_rank, all_terms, all_fields]
 
 
-def search_keywords(args):
+def search_keywords(args, report_page):
 
     # build a list of all the keywords in the order that they
     # appear in the keywords file (rank order)
@@ -317,6 +317,7 @@ def search_keywords(args):
                 else:
                     # hits = [str(hit) for hit in  search_keywords_gene_iter(args, genename, keywords)] 
                     hits = list(search_keywords_gene_iter(args, genename, keywords))
+                    report_hits(genename, hits, report_page)
                     hits_output = summarise_hits(hits) 
                     output_row = [input_row[field] for field in reader.fieldnames]
                     writer.writerow(output_row + hits_output)
@@ -442,6 +443,10 @@ def parse_args():
                         choices=['comma', 'tab'],
                         help='delimiter for gene file')
 
+    parser.add_argument('--report', metavar='FILENAME', type=str,
+                        help='detaile search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
+                        default=DEFAULT_REPORT_FILE)
+
     return parser.parse_args()
 
 
@@ -459,7 +464,6 @@ def get_gene_delimiter(args):
                      .format(DEFAULT_GENE_DELIMITER))
         return DEFAULT_GENE_DELIMITER
 
-
 def main():
     args = parse_args()
 
@@ -469,7 +473,8 @@ def main():
                         filemode='w',
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S')
-    logging.info('command line: {0}'.format(' '.join(sys.argv)))
+    command_line_text = "annokey " + ' '.join(sys.argv[1:])
+    logging.info('command line: {0}'.format(command_line_text))
 
     args.delimiter = get_gene_delimiter(args)
 
@@ -489,8 +494,14 @@ def main():
         # fetch gene and pubmed records and save them in cache. 
         fetch_records(args)
 
+    report_page = init_report_page(command_line_text)
+
     # Get gene information from cache.
-    search_keywords(args)
+    search_keywords(args, report_page)
+
+    write_report(args.report, report_page)
+
+    
 
 if __name__ == '__main__':
     main()

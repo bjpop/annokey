@@ -29,6 +29,7 @@ setup(
         'of interest.'),
     install_requires=[
         "biopython >= 1.62",
-        "lxml >= 3.1"
+        "lxml >= 3.1",
+        "html >= 1.16"
     ],
 )
