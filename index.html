@@ -73,7 +73,7 @@
 <ol>
 <li>A CSV file representing a set of genes, one gene per row.</li>
 <li>A list of search terms sorted in descending order of priority.</li>
-</ol><p>Annokey produces two main outputs:</p>
+</ol><p>Annokey's main outputs are:</p>
 
 <ol>
 <li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given three extra columns summarising the search results. The extra columns are explained below in an example.</li>
@@ -121,7 +121,7 @@ BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Proc
 <a name="the-input-csv-file-must-be-formatted-as-follows" class="anchor" href="#the-input-csv-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The input CSV file must be formatted as follows:</h6>
 
 <ul>
-<li>The file may be comma or tab separated. By default Annokey assumes the file will be comma separated, but you may override this with the <code>--delimiter tab</code> command line argument.</li>
+<li>The file may be comma or tab separated. Annokey looks at the filename extension to guess what format is used (".csv" for comma separated files, ".tsv" for tab separated files) but you may override this with the <code>--delimiter {comma|tab}</code> command line argument.</li>
 <li>The first row in the file must be a header row.</li>
 <li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene".</li>
 </ul><p>Here is an example valid gene file in comma separated format:</p>
@@ -182,42 +182,17 @@ s100,ABC,CHECK2,snp
 
 <p>Annokey automatically keeps a local cache of any data retrieved from an online search. This allows you to incrementally accumulate a local copy of parts of the database, without having to download the entire thing in advance.</p>
 
-<p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, however you can specify an alternative location via a command line argument. The structure of the cache directory is as follows:</p>
-
-<pre><code>genecache
-    organism (e.g. human, mouse)
-        hash_dir (a numbered directory in the range [0,255])
-            gene_name (e.g. PALB2)
-                gene_id (XML file, e.g 79728)
-</code></pre>
-
-<p>At the top level is the genecache directory. This has sub-directories for each organism. This has up to 256 sub-directories numbered 0 to 255. The purpose of these sub-directories is to spread out the stored gene information, so that we don't put all the gene files in one sub-directory. Some computer file systems exhibit poor performance when you put too many files in one directory.</p>
-
-<hr><p><strong>Technical note</strong>: the database records for each gene are stored underneath one of the 256 possible hash directories. The exact hash directory is determined by the formula:</p>
-
-<pre><code>md5(gene_name) % 256
-</code></pre>
-
-<p>where <code>gene_name</code> is the (string) gene name (such as "PALB2"), md5 is a hash function and % is the modulus operator. We are only using md5 as a way to evenly distribute gene names to directories, so we don't care about its cryptographic properties (particularly its known weaknesses). </p>
-
-<p>For example, the entry for PALB2 is calculated as follows:</p>
-
-<pre><code>md5("PALB2") % 256 = 163
-</code></pre>
-
-<p>Which means that PALB2 will be found in genecache/human/163/PALB2/79728. The actual data is stored in the file called 79728, which is in XML format. The number 79728 is the NCBI Gene database ID of the PALB2, which is also reflected in the URL to access the entry in the online database <a href="http://www.ncbi.nlm.nih.gov/gene/79728">http://www.ncbi.nlm.nih.gov/gene/79728</a>.</p>
-
-<p>Also note that we normalise the gene name when it is stored in the cache to be all uppercase characters, which means we can reliably find the gene regardless of how it was written in the input gene file or stored in the NCBI database.</p>
+<p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, however you can specify an alternative location via the <code>--genecache DIR</code> command line argument. The structure of the cache directory is discussed in the technical details section below.</p>
 
 <hr><h3>
 <a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
 
 <p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
 
-<pre><code>usage: annokey [-h] [--version] [--online] [--organism ORGANISM]
+<pre><code>usage: annokey [-h] [--version] [--online] [--xml FILE] [--organism ORGANISM]
                [--email EMAIL_ADDRESS] [--genecache DIR] [--pubmedcache DIR]
-               --keys FILE --genes FILE [--log FILENAME]
-               [--delimiter {comma,tab}]
+               --terms FILE --genes FILE [--log FILENAME]
+               [--delimiter {comma,tab}] [--report FILENAME]
 
 Search NCBI for genes of interest, based on concept-keyword search.
 
@@ -225,22 +200,26 @@ optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
   --online              Search gene information from online (NCBI).
+  --xml FILE            Populate gene information from downloaded XML dump of
+                        NCBI gene database
   --organism ORGANISM   Name of the organism to search
   --email EMAIL_ADDRESS
-                        Your email address. This is required byNCBI for online
-                        queries. You do not needto supply an email address for
-                        cached queries.
+                        Your email address. This is required by NCBI for
+                        online queries. You do not need to supply an email
+                        address for cached queries.
   --genecache DIR       Save a cache of the downloaded results from NCBI gene
                         into this directory
   --pubmedcache DIR     Save a cache of the downloaded results from NCBI
                         pubmed into this directory
-  --keys FILE           The tab separated file containing the keywords to be
-                        searched.
+  --terms FILE          The tab separated file containing the search-terms to
+                        be searched.
   --genes FILE          The tab separated file containing the gene information
                         including name of the gene, one gene name per line.
   --log FILENAME        log progress in FILENAME, defaults to annokey_log.txt
   --delimiter {comma,tab}
                         delimiter for gene file
+  --report FILENAME     detaile search report as HTML page, defaults to
+                        annokey_report.html
 </code></pre>
 
 <p>Annokey requires two arguments <code>--keys</code> and <code>--genes</code>, which define the search terms and gene list respectively. The remaining arguments are optional. </p>
@@ -276,23 +255,7 @@ optional arguments:
 <pre><code>annokey --organism mouse --online --email foo@bar.com --keys keys.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
 </code></pre>
 
-<h3>
-<a name="required-format-of-input-files" class="anchor" href="#required-format-of-input-files"><span class="octicon octicon-link"></span></a>Required format of input files</h3>
-
-<p>The input file specifying the search terms is in free text format. Each line of the file specifies a search term. Annokey is case sensitive, so the following terms are considered different:</p>
-
-<pre><code>dna repair
-DNA repair
-DNA Repair
-dNA rEpAiR
-</code></pre>
-
-<p>The input file specifying the list of genes is in Comma Separated Format (CSV). Each line of the file specifies an individual gene. There must be one column in the file which specifies the name of the gene. The columns of the file must have headings, and the gene column must be entitled <code>Gene</code>. The file may have zero or more other columns. Additional columns are ignored by Annokey, but will be preserved in the output of the program.</p>
-
-<h4>
-<a name="format-of-the-input-genes-file" class="anchor" href="#format-of-the-input-genes-file"><span class="octicon octicon-link"></span></a>Format of the input genes file</h4>
-
-<p>The <code>--genes</code> command line argument specifies the name of the input genes file. The format of the file is quite flexible, but a few constraints must be satisfied. The first row of the file must be a heading row, and exactly one of the headings must be the word 'Gene'. If there are multiple columns in the file then they can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
+<p>If there are multiple columns in the genes file then they can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
 
 <pre><code>annokey --keys keys.txt --genes mygenes.txt --delimiter comma
 </code></pre>
@@ -302,7 +265,35 @@ dNA rEpAiR
 <pre><code>annokey --keys keys.txt --genes mygenes.txt --delimiter tab
 </code></pre>
 
-<p>The relative order of the columns in the genes file does not matter, as long as one of them contains the names of genes, and that same column has "Gene" as its heading. Annokey will ignore the other columns, but it will preserve them in the output, in their same relative position.</p>
+<h3>
+<a name="technical-details" class="anchor" href="#technical-details"><span class="octicon octicon-link"></span></a>Technical details</h3>
+
+<p>The structure of the gene cache directory is as follows:</p>
+
+<pre><code>genecache
+    organism (e.g. human, mouse)
+        hash_dir (a numbered directory in the range [0,255])
+            gene_name (e.g. PALB2)
+                gene_id (XML file, e.g 79728)
+</code></pre>
+
+<p>At the top level is the genecache directory. This has sub-directories for each organism. This has up to 256 sub-directories numbered 0 to 255. The purpose of these sub-directories is to spread out the stored gene information, so that we don't put all the gene files in one sub-directory. Some computer file systems exhibit poor performance when you put too many files in one directory.</p>
+
+<p>The database records for each gene are stored underneath one of the 256 possible hash directories. The exact hash directory is determined by the formula:</p>
+
+<pre><code>md5(gene_name) % 256
+</code></pre>
+
+<p>where <code>gene_name</code> is the (string) gene name (such as "PALB2"), md5 is a hash function and % is the modulus operator. We are only using md5 as a way to evenly distribute gene names to directories, so we don't care about its cryptographic properties (particularly its known weaknesses). </p>
+
+<p>For example, the entry for PALB2 is calculated as follows:</p>
+
+<pre><code>md5("PALB2") % 256 = 163
+</code></pre>
+
+<p>Which means that PALB2 will be found in genecache/human/163/PALB2/79728. The actual data is stored in the file called 79728, which is in XML format. The number 79728 is the NCBI Gene database ID of the PALB2, which is also reflected in the URL to access the entry in the online database <a href="http://www.ncbi.nlm.nih.gov/gene/79728">http://www.ncbi.nlm.nih.gov/gene/79728</a>.</p>
+
+<p>Also note that we normalise the gene name when it is stored in the cache to be all uppercase characters, which means we can reliably find the gene regardless of how it was written in the input gene file or stored in the NCBI database.</p>
       </section>
     </div>
 
