@@ -34,16 +34,19 @@
         <h3>
 <a name="introduction" class="anchor" href="#introduction"><span class="octicon octicon-link"></span></a>Introduction</h3>
 
-<p>Annokey is a tool for annotating gene lists with the results of a keyword search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genetic mutations ordered by relevance to a domain of interest, such as "breast cancer" or "DNA repair pathways" etcetera. The user steers the search by specifying a ranked list of keywords and phrases that are likely to be highly correlated with their domain of interest.</p>
+<p>Annokey is a tool for annotating gene lists with the results of a keyword (or key-term) search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genetic mutations ordered by relevance to a domain of interest, such as "breast cancer" or "DNA repair" etc. The user steers the search by specifying a ranked list of keywords and terms that are likely to be highly correlated with their domain of interest.</p>
 
 <p>Annokey's main inputs are:</p>
 
 <ol>
-<li>A CSV file representing your set of genes, one gene per row.</li>
+<li>A CSV file representing a set of genes, one gene per row.</li>
 <li>A list of search terms sorted in descending order of priority.</li>
-</ol><p>Annokey's main output is a new CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given an extra column containing information about which search terms matched that gene in NCBI and PubMed abstracts.</p>
+</ol><p>Annokey produces two main outputs:</p>
 
-<p>For example, if your input gene CSV file contains the following rows:</p>
+<ol>
+<li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given an extra column containing information about which search terms matched that gene in NCBI and PubMed abstracts.</li>
+<li>A HTML report file showing more detailed search results for each gene. This includes hyper-links back to the relevant entries in the NCBI website for easy follow-up investigation.</li>
+</ol><p>For example, if your input gene CSV file contains the following rows:</p>
 
 <pre><code>Gene
 XRCC2
@@ -59,20 +62,24 @@ breast cancer
 
 <p>the output CSV file produced by Annokey will look like this:</p>
 
-<pre><code>Gene,Annokey_annotation
-XRCC2,"(kw: DNA repair, rank: 1, ncbi id: 7516, fields: Process;Alternative Name;PMID(106/181))","(kw: breast cancer, rank: 2, ncbi id: 7516, fields: GeneRIFs(8/33);PMID(53/181))"
-PALB2,"(kw: DNA repair, rank: 1, ncbi id: 79728, fields: GeneRIFs(2/77);Process;PMID(34/189))","(kw: breast cancer, rank: 2, ncbi id: 79728, fields: GeneRIFs(37/77);Summary;PMID(147/189))"
-BRCA1,"(kw: DNA repair, rank: 1, ncbi id: 672, fields: GeneRIFs(27/1258);Summary;Process;PMID(380/3659))","(kw: breast cancer, rank: 2, ncbi id: 672, fields: GeneRIFs(334/1258);Summary;Description;Alternative Name;PMID(2268/3659))"
+<pre><code>Gene,Highest Ranked Match,Matched Terms,Fields
+XRCC2,1,DNA repair;breast cancer,Process;GeneRIFs(8/33);Alternative Name
+PALB2,1,DNA repair;breast cancer,Process;GeneRIFs(37/78);GeneRIFs(2/78);PMID(2/192);Summary
+BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Process;GeneRIFs(342/1275);Summary;Alternative Name;PMID(19/3698)
 </code></pre>
 
 <p>As you can see the output contains a lot of detail about each search term match. Consider the first case for XRCC2:</p>
 
-<pre><code>"(kw: DNA repair, rank: 1, ncbi id: 7516, fields: Process;Alternative Name;PMID(106/181))","(kw: breast cancer, rank: 2, ncbi id: 7516, fields: GeneRIFs(8/33);PMID(53/181))"
+<pre><code>XRCC2,1,DNA repair;breast cancer,Process;GeneRIFs(8/33);Alternative Name
 </code></pre>
 
-<p>This annotation contains two entries, one each for the search terms "DNA repair" and "breast cancer". The entry for "DNA repair" says that the search term had rank 1 (it was the first entry in the file of search terms), the gene record for XRCC2 was found in the NCBI database record with ID 7516, and the search term was found in three places: "Process", "Alternative Name" and PMID(106/181)".</p>
+<p>In addition to the gene name, the output row contains three extra columns:</p>
 
-<h3>
+<ol>
+<li>Highest Ranked Match: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
+<li>Matched Terms: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
+<li>Fields: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
+</ol><h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
 <p>Annokey currently requires version 2.7 of Python.</p>
