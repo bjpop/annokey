@@ -73,21 +73,15 @@
 <ol>
 <li>A CSV file representing a set of genes, one gene per row.</li>
 <li>A list of search terms sorted in descending order of priority.</li>
-</ol><h6>
-<a name="input-formatting-requirements" class="anchor" href="#input-formatting-requirements"><span class="octicon octicon-link"></span></a>Input formatting requirements</h6>
-
-<p>The input CSV file must be formatted as follows:</p>
-
-<ul>
-<li>The file may be comma or tab separated. By default Annokey assumes the file will be comma separated, but you may override this with the <code>--delimiter tab</code> command line argument.</li>
-<li>The first row in the file must be a header row.</li>
-<li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene".</li>
-</ul><p>Annokey produces two main outputs:</p>
+</ol><p>Annokey produces two main outputs:</p>
 
 <ol>
 <li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given three extra columns summarising the search results. The extra columns are explained below in an example.</li>
 <li>A HTML report file showing more detailed search results for each gene. This includes hyper-links back to the relevant entries in the NCBI website for easy follow-up investigation.</li>
-</ol><p>For example, if your input gene CSV file contains the following rows:</p>
+</ol><h6>
+<a name="simple-example-of-inputs-and-outputs" class="anchor" href="#simple-example-of-inputs-and-outputs"><span class="octicon octicon-link"></span></a>Simple example of inputs and outputs</h6>
+
+<p>For example, if your input gene CSV file contains the following rows:</p>
 
 <pre><code>Gene
 XRCC2
@@ -120,7 +114,24 @@ BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Proc
 <li>Highest Ranked Match: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
 <li>Matched Terms: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
 <li>Fields: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
-</ol><h3>
+</ol><h6>
+<a name="input-formatting-requirements" class="anchor" href="#input-formatting-requirements"><span class="octicon octicon-link"></span></a>Input formatting requirements</h6>
+
+<p>The input CSV file must be formatted as follows:</p>
+
+<ul>
+<li>The file may be comma or tab separated. By default Annokey assumes the file will be comma separated, but you may override this with the <code>--delimiter tab</code> command line argument.</li>
+<li>The first row in the file must be a header row.</li>
+<li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene".</li>
+</ul><p>The search term file must be formatted as follows:</p>
+
+<ul>
+<li>Each search term must appear on a separate line.</li>
+<li>A search term may be either a literal phrase or a regular expression.</li>
+<li>Literal phrases may contain one or more words. Literal phrases are matched exactly by Annokey. This includes character case. For example "DNA" is considered to be different to "dna".</li>
+<li>Regular expressions must start with the word "regex" and then be followed by a valid Python regular expression. The <a href="http://docs.python.org/2/howto/regex.html">Python regular expression HOWTO</a> provides a good tutorial on the topic.</li>
+<li>Search terms are ranked based on their relative order in the file. The search term on line 1 has rank 1 and so on. Thus the most important search term appears on the first line of the file. The second most important term appears on the second line, and so forth.</li>
+</ul><h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
 <p>Annokey currently requires version 2.7 of Python.</p>
