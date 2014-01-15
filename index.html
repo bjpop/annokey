@@ -232,6 +232,9 @@ optional arguments:
 <pre><code>annokey --terms terms.txt --genes genes.csv
 </code></pre>
 
+<h6>
+<a name="saving-the-annotated-output-to-a-file" class="anchor" href="#saving-the-annotated-output-to-a-file"><span class="octicon octicon-link"></span></a>Saving the annotated output to a file</h6>
+
 <p>Annokey produces a new gene file on standard output, which you will normally want to redirect to a file:</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
@@ -242,7 +245,7 @@ optional arguments:
 
 <p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. By default this is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
+<pre><code>annokey --terms terms.txt --genes genes.csv --log mylogfile.txt
 </code></pre>
 
 <p>One of the more useful aspects of the log file is that it records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
@@ -254,7 +257,7 @@ optional arguments:
 
 <p>Alternatively, Annokey can be made to perform an online search with the <code>--online</code> argument. This argument also requires you to specify an email address (as per requirements of the NCBI Gene database):</p>
 
-<pre><code>annokey --online --email foo@bar.com --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
+<pre><code>annokey --online --email foo@bar.com --terms terms.txt --genes genes.csv
 </code></pre>
 
 <p>Obviously you should use a real email address instead of <code>foo@bar.com</code>.</p>
@@ -264,7 +267,7 @@ optional arguments:
 
 <p>By default Annokey uses the human version of the NCBI Gene database, but you can specify an alternative organism with the <code>--organism</code> argument:</p>
 
-<pre><code>annokey --organism mouse --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
+<pre><code>annokey --organism mouse --terms terms.txt --genes genes.csv
 </code></pre>
 
 <h6>
