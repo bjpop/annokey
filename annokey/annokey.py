@@ -401,8 +401,8 @@ def parse_args():
     parser.add_argument('--email',
                         metavar='EMAIL_ADDRESS',
                         type=str,
-                        help='Your email address. This is required by'
-                             'NCBI for online queries. You do not need'
+                        help='Your email address. This is required by '
+                             'NCBI for online queries. You do not need '
                              'to supply an email address for cached queries.')
 
     parser.add_argument('--genecache',
@@ -440,10 +440,10 @@ def parse_args():
 
     parser.add_argument('--delimiter', type=str,
                         choices=['comma', 'tab'],
-                        help='delimiter for gene file')
+                        help='Delimiter for gene file.')
 
     parser.add_argument('--report', metavar='FILENAME', type=str,
-                        help='detaile search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
+                        help='Save a detailed search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
                         default=DEFAULT_REPORT_FILE)
 
     return parser.parse_args()
