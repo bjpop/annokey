@@ -184,7 +184,7 @@ s100,ABC,CHECK2,snp
 
 <p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, however you can specify an alternative location via the <code>--genecache DIR</code> command line argument. The structure of the cache directory is discussed in the technical details section below.</p>
 
-<hr><h3>
+<h3>
 <a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
 
 <p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
@@ -222,6 +222,9 @@ optional arguments:
                         to annokey_report.html
 </code></pre>
 
+<h6>
+<a name="required-arguments" class="anchor" href="#required-arguments"><span class="octicon octicon-link"></span></a>Required arguments</h6>
+
 <p>Annokey requires two arguments <code>--terms</code> and <code>--genes</code>, which define the search terms and gene list respectively. The remaining arguments are optional. </p>
 
 <p>Annokey's default mode is to use local "offline" search in a cached copy of the NCBI Gene database. For example, if the file <code>terms.txt</code> contains a list of search terms and the file <code>genes.csv</code> contains the gene information, then the following command is sufficient to perform a search:</p>
@@ -234,12 +237,18 @@ optional arguments:
 <pre><code>annokey --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
 </code></pre>
 
+<h6>
+<a name="log-file" class="anchor" href="#log-file"><span class="octicon octicon-link"></span></a>Log file</h6>
+
 <p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. By default this is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.csv --log mylogfile.txt &gt; annotated_genes.csv
 </code></pre>
 
 <p>One of the more useful aspects of the log file is that it records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
+
+<h6>
+<a name="online-search" class="anchor" href="#online-search"><span class="octicon octicon-link"></span></a>Online search</h6>
 
 <p>The effectiveness of offline search depends greatly on the status of your local cache of the NCBI gene database.</p>
 
@@ -250,10 +259,16 @@ optional arguments:
 
 <p>Obviously you should use a real email address instead of <code>foo@bar.com</code>.</p>
 
+<h6>
+<a name="organism" class="anchor" href="#organism"><span class="octicon octicon-link"></span></a>Organism</h6>
+
 <p>By default Annokey uses the human version of the NCBI Gene database, but you can specify an alternative organism with the <code>--organism</code> argument:</p>
 
 <pre><code>annokey --organism mouse --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
 </code></pre>
+
+<h6>
+<a name="gene-file-delimiter" class="anchor" href="#gene-file-delimiter"><span class="octicon octicon-link"></span></a>Gene file delimiter</h6>
 
 <p>If there are multiple columns in the genes file then they can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
 
