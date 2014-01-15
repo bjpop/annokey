@@ -114,16 +114,31 @@ BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Proc
 <li>Highest Ranked Match: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
 <li>Matched Terms: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
 <li>Fields: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
-</ol><h6>
-<a name="input-formatting-requirements" class="anchor" href="#input-formatting-requirements"><span class="octicon octicon-link"></span></a>Input formatting requirements</h6>
+</ol><h4>
+<a name="input-formatting-requirements" class="anchor" href="#input-formatting-requirements"><span class="octicon octicon-link"></span></a>Input formatting requirements</h4>
 
-<p>The input CSV file must be formatted as follows:</p>
+<h6>
+<a name="the-input-csv-file-must-be-formatted-as-follows" class="anchor" href="#the-input-csv-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The input CSV file must be formatted as follows:</h6>
 
 <ul>
 <li>The file may be comma or tab separated. By default Annokey assumes the file will be comma separated, but you may override this with the <code>--delimiter tab</code> command line argument.</li>
 <li>The first row in the file must be a header row.</li>
 <li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene".</li>
-</ul><p>The search term file must be formatted as follows:</p>
+</ul><p>Here is an example valid gene file in comma separated format:</p>
+
+<pre><code>Sample,Study,Gene,Variant
+s100,XYZ,BRCA1,snp
+s100,XYZ,XRCC2,indel
+s888,ABC,PALB2,snp
+s100,ABC,CHECK2,snp
+</code></pre>
+
+<p>Notice that there are multiple columns in each row. The only column that Annokey considers is the one with the header "Gene".</p>
+
+<p>Annokey will preserve the other columns in its output, and add its own annoations at the end of each row.</p>
+
+<h6>
+<a name="the-search-term-file-must-be-formatted-as-follows" class="anchor" href="#the-search-term-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The search term file must be formatted as follows:</h6>
 
 <ul>
 <li>Each search term must appear on a separate line.</li>
@@ -131,7 +146,19 @@ BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Proc
 <li>Literal phrases may contain one or more words. Literal phrases are matched exactly by Annokey. This includes character case. For example "DNA" is considered to be different to "dna".</li>
 <li>Regular expressions must start with the word "regex" and then be followed by a valid Python regular expression. The <a href="http://docs.python.org/2/howto/regex.html">Python regular expression HOWTO</a> provides a good tutorial on the topic.</li>
 <li>Search terms are ranked based on their relative order in the file. The search term on line 1 has rank 1 and so on. Thus the most important search term appears on the first line of the file. The second most important term appears on the second line, and so forth.</li>
-</ul><h3>
+</ul><p>A literal search term might look like this:</p>
+
+<pre><code>breast cancer
+</code></pre>
+
+<p>A regular expression search term might look like this:</p>
+
+<pre><code>regex [Bb]reast [Cc]ancer(s)?
+</code></pre>
+
+<p>This regular expression is more flexible than the previous literal term because the regular expression will match with upper and lower case characters at the start of each work, and it also allows for an optional "s" at the end of the second word.</p>
+
+<h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
 <p>Annokey currently requires version 2.7 of Python.</p>
