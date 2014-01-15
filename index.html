@@ -41,29 +41,31 @@
 
 <p>Annokey's main features are:</p>
 
-<ol>
-<li>A choice of online or offline search.
+<h6>
+<a name="online-and-offline-search" class="anchor" href="#online-and-offline-search"><span class="octicon octicon-link"></span></a>Online and offline search</h6>
 
 <ul>
 <li>Online search access the NCBI databases directly over a network connection. Pros: you get the latest, must up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
-<li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search. Cons: the cache data may not be up-to-date.</li>
-</ul>
-</li>
-<li>Search terms can be specified as literal terms or as regular expressions.
+<li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search, and does not need a network connection. Cons: the cache data may be incomplete or not up-to-date.</li>
+</ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>genetoxml.py</code> for automatically downloading this XML copy of the database.</p>
+
+<h5>
+<a name="flexible-search-terms" class="anchor" href="#flexible-search-terms"><span class="octicon octicon-link"></span></a>Flexible search terms</h5>
+
+<p>Search terms can be specified as literal terms or as regular expressions.</p>
 
 <ul>
 <li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example due to issues with upper and lower case letters.</li>
 <li>Regular expressions are much more flexible than literal terms, but they require more expertise from the user.</li>
-</ul>
-</li>
-<li>The search results are provided in summary form, as extra annotations to the input gene list, and also in a more detailed report, as a HTML document.
+</ul><h6>
+<a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h6>
+
+<p>The search results are provided in summary form, as extra annotations to the input gene list, and also in a more detailed report, as a HTML document.</p>
 
 <ul>
 <li>Summary annotations provide a quick overview of the relevance of a key phrase to a gene, and can be incorporated into a workflow using spreadsheets.</li>
 <li>The detailed report provides more information than the summary, and contains hyper-links back to the online NCBI databases for easy reference.</li>
-</ul>
-</li>
-</ol><h3>
+</ul><h3>
 <a name="inputs-and-outputs" class="anchor" href="#inputs-and-outputs"><span class="octicon octicon-link"></span></a>Inputs and Outputs</h3>
 
 <p>Annokey's main inputs are:</p>
