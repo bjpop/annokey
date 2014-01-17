@@ -64,5 +64,3 @@ def save_gene_cache(cachedir, organism, xml_file):
             elem.clear()
             while elem.getprevious() is not None:
                 del elem.getparent()[0]
-        else:
-            print("skipping item")

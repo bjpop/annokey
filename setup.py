@@ -4,11 +4,11 @@ from distutils.core import setup
 
 setup(
     name='annokey',
-    version='0.1.0',
+    version='1.0.0',
     author='Bernie Pope',
     author_email='bjpope@unimelb.edu.au',
     packages=['annokey'],
-    scripts=['annokey/genetoxml.py'],
+    scripts=['annokey/get_ncbi_gene_snapshot_xml.py'],
     entry_points={
         'console_scripts': ['annokey = annokey.annokey:main']
     },
