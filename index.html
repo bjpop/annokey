@@ -225,7 +225,7 @@ optional arguments:
 
 <p>Annokey requires two arguments <code>--terms</code> and <code>--genes</code>, which define the search terms and gene list respectively. The remaining arguments are optional. </p>
 
-<p>Annokey's default mode is to use local "offline" search in a cached copy of the NCBI Gene database. For example, if the file <code>terms.txt</code> contains a list of search terms and the file <code>genes.csv</code> contains the gene information, then the following command is sufficient to perform a search:</p>
+<p>Annokey's default mode is to use local offline search in a cached copy of the NCBI Gene and PubMed databases. For example, if the file <code>terms.txt</code> contains a list of search terms and the file <code>genes.csv</code> contains the gene information, then the following command is sufficient to perform a search:</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.csv
 </code></pre>
@@ -233,7 +233,7 @@ optional arguments:
 <h6>
 <a name="saving-the-annotated-output-to-a-file" class="anchor" href="#saving-the-annotated-output-to-a-file"><span class="octicon octicon-link"></span></a>Saving the annotated output to a file</h6>
 
-<p>Annokey produces a new gene file on standard output, which you will normally want to redirect to a file:</p>
+<p>Annokey produces a new gene file on standard output. You can save this output to a file using the Unix shell redirection operator "&gt;":</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.csv &gt; annotated_genes.csv
 </code></pre>
@@ -241,17 +241,17 @@ optional arguments:
 <h6>
 <a name="log-file" class="anchor" href="#log-file"><span class="octicon octicon-link"></span></a>Log file</h6>
 
-<p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. By default this is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
+<p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. For instance, the log file will record the names of any genes that it could not find in the local cache. By default the log file is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.csv --log mylogfile.txt
 </code></pre>
 
-<p>One of the more useful aspects of the log file is that it records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
+<p>The log file also records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
 
 <h6>
 <a name="online-search" class="anchor" href="#online-search"><span class="octicon octicon-link"></span></a>Online search</h6>
 
-<p>The effectiveness of offline search depends greatly on the status of your local cache of the NCBI gene database.</p>
+<p>The effectiveness of offline search depends greatly on the status of your local cache of data.</p>
 
 <p>Alternatively, Annokey can be made to perform an online search with the <code>--online</code> argument. This argument also requires you to specify an email address (as per requirements of the NCBI Gene database):</p>
 
@@ -271,7 +271,7 @@ optional arguments:
 <h6>
 <a name="gene-file-delimiter" class="anchor" href="#gene-file-delimiter"><span class="octicon octicon-link"></span></a>Gene file delimiter</h6>
 
-<p>If there are multiple columns in the genes file then they can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
+<p>Multiple columns in the genes input file can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
 
 <pre><code>annokey --terms terms.txt --genes genes.txt --delimiter comma
 </code></pre>
@@ -280,6 +280,38 @@ optional arguments:
 
 <pre><code>annokey --terms terms.txt --genes genes.txt --delimiter tab
 </code></pre>
+
+<h6>
+<a name="populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>Populating the gene cache with a complete download of NCBI gene</h6>
+
+<p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey.</p>
+
+<p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
+
+<p>The process of downloading and converting the database snapshot is rather convoluted so we provide a command line tool called <code>genetoxml.py</code> to automate the process (for the human database and Linux only at the moment). It requires that you have a copy of the <code>gene2xml</code> program in your PATH. You can run the program like so:</p>
+
+<pre><code>genetoxml.py
+</code></pre>
+
+<p>the output will look like this:</p>
+
+<pre><code>Starts connecting to server (ftp.ncbi.nlm.nih.gov).
+  &gt;&gt; Connecting to server is successful.
+Starts getting the last modified time of data.
+  &gt;&gt; Getting the last modified time of data is successful.
+  &gt;&gt; The last modified time of the data at the server is 20140116041343
+Starts downloading data from server.
+  &gt;&gt; The file size is 160.39M
+  &gt;&gt; Downloading...        100.00% 
+  &gt;&gt; Downloading data is successful.
+  &gt;&gt; Homo_sapiens_20140116041343.ags.gz is stored.
+Starts converting Homo_sapiens_20140116041343.ags.gz to Homo_sapiens_20140116041343.xml.
+  &gt;&gt; Converting ...
+  &gt;&gt; Converting Homo_sapiens_20140116041343.ags.gz to Homo_sapiens_20140116041343.xml is successful.
+Done.
+</code></pre>
+
+<p>When it is complete you will have a file called <code>Homo_sapiens_N.xml</code> in your directory, where <code>N</code> is a number representing the date that the snapshot was taken. It should be several gigabytes in size (it was 12 gigabytes on 17 January 2014).</p>
 
 <h3>
 <a name="technical-details" class="anchor" href="#technical-details"><span class="octicon octicon-link"></span></a>Technical details</h3>
