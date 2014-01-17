@@ -291,7 +291,7 @@ optional arguments:
 
 <p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey. Details about how to obtain a snapshot of the database are provided below.</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.txt --xml Homo_sapiens_20140116041343.xml
+<pre><code>annokey --terms terms.txt --genes genes.csv --xml Homo_sapiens_20140116041343.xml
 </code></pre>
 
 <p>In the example above the snapshot is stored in the file called Homo_sapiens_20140116041343.xml. It stores a record for each gene in the human database.
@@ -414,23 +414,39 @@ optional arguments:
                 Gene-ref_syn_E (Synonyms)
     Entrezgene_summary (Summary)
     Entrezgene_comments
-        Gene-commentary_type (type of commentary)
-        Gene-commentary_text (GeneRIFs, if type == generif)
-        Gene-commentary_refs
-            Pub_pmid/PubMedId (PmIds)
-        Gene-commentary_products
-        Gene-commentary_comment
-            Gene-commentary_text (Pathways, if heading == Pathways)
-            Gene-commentary_comment (Interactions, if heading == Interactions)
-            (Conserved Domains, if heading == Conserved Domains)
-            (Function, if label == Function)
-            (Component, if label == Component)
-            (Process, if label == Process)
-    Entrezgene_properties
-        Gene-commentary/Gene-commentary_comment
-    Entrezgene_prot
-        Prot-ref/Prot-ref_name
-            Prot-ref_name_E (Alternative Name)
+        Gene-commentary
+            Gene-commentary_type (type of commentary)
+            Gene-commentary_heading (heading of commentary)
+            Gene-commentary_label (label of commentary)
+            Gene-commentary_text (GeneRIFs, if type == generif)
+            Gene-commentary_refs
+                Pub_pmid/PubMedId (PmIds)
+            Gene-commentary_products
+            Gene-commentary_comment
+                Gene-commentary_text (Pathways, if heading == Pathways)
+                Gene-commentary_comment
+                    (Interactions, if heading == Interactions)
+                    (Conserved Domains, if heading == Conserved Domains)
+                    (Function, if label == Function)
+                    (Component, if label == Component)
+                    (Process, if label == Process)
+                    NCBI Reference Sequences (RefSeq) (more commentaries)
+        Entrezgene_properties
+            Gene-commentary/Gene-commentary_comment
+        Entrezgene_prot
+            Prot-ref/Prot-ref_name
+                Prot-ref_name_E (Alternative Name)
+</code></pre>
+
+<p>Having collected all the PubMed IDs from a gene entry (as above) Annokey then searches in the corresponding PubMed database entry. The diagram below illustrates the parts of the PubMed XML schema which are searched by Annokey. The parts marked with an asterisk indicate the fields of text where Annokey searches for key phrases.</p>
+
+<pre><code>PubmedArticle
+    MedlineCitation
+        Article
+            JournalTitle (*)
+            ArticleTitle (*)
+            Abstract
+                AbstractText (Abstract) (*)
 </code></pre>
 
 <h6>
