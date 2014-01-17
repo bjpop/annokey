@@ -282,9 +282,17 @@ optional arguments:
 </code></pre>
 
 <h6>
-<a name="populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>Populating the gene cache with a complete download of NCBI gene</h6>
+<a name="using-a-snapshot-of-the-ncbi-gene-database" class="anchor" href="#using-a-snapshot-of-the-ncbi-gene-database"><span class="octicon octicon-link"></span></a>Using a snapshot of the NCBI gene database</h6>
 
-<p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey.</p>
+<p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey. Details about how to obtain a snapshot of the database are provided below:</p>
+
+<pre><code>annokey --terms terms.txt --genes genes.txt --xml Homo_sapiens_20140116041343.xml
+</code></pre>
+
+<p>Annokey will process the XML file and populate the local gene database cache. Future searches can just use the cache directly, and will be substantially faster.</p>
+
+<h4>
+<a name="populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>Populating the gene cache with a complete download of NCBI gene</h4>
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
