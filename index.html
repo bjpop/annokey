@@ -37,6 +37,11 @@
 <p>Annokey is a command line tool for annotating gene lists with the results of a keyword (or key phrase) search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genes  by relevance to a domain of interest, such as "breast cancer" or "DNA repair" etc. The user steers the search by specifying a ranked list of keywords and terms that are likely to be highly correlated with their domain of interest.</p>
 
 <h3>
+<a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h3>
+
+<p>Annokey is open source software, released under the <a href="https://github.com/bjpop/annokey/blob/master/LICENSE.txt">three clause BSD lincense</a>.</p>
+
+<h3>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
 
 <p>Annokey's main features are:</p>
@@ -392,6 +397,41 @@ optional arguments:
 
 <h3>
 <a name="technical-details" class="anchor" href="#technical-details"><span class="octicon octicon-link"></span></a>Technical details</h3>
+
+<h6>
+<a name="which-parts-of-ncbi-gene-and-pubmed-does-annokey-search" class="anchor" href="#which-parts-of-ncbi-gene-and-pubmed-does-annokey-search"><span class="octicon octicon-link"></span></a>Which parts of NCBI gene and PubMed does Annokey search?</h6>
+
+<p>Annokey searches in the following sections of the NCBI gene database. The diagram below illustrates the parts of the NCBI Gene XML schema which are searched by Annokey. Comments in parenthesis provide additional remarks about how the data is processed and, where relevant, provides the "field names" that Annokey associates with the data:</p>
+
+<pre><code>Entrezgene
+    Entrezgene_track-info
+        Gene-track/Gene-track_status (we skip entries which are discontinued)
+    Entrezgene_gene
+        Gene-ref
+            Gene-ref_locus (Gene Name)
+            Gene-ref_desc (Description)
+            Gene-ref_syn
+                Gene-ref_syn_E (Synonyms)
+    Entrezgene_summary (Summary)
+    Entrezgene_comments
+        Gene-commentary_type (type of commentary)
+        Gene-commentary_text (GeneRIFs, if type == generif)
+        Gene-commentary_refs
+            Pub_pmid/PubMedId (PmIds)
+        Gene-commentary_products
+        Gene-commentary_comment
+            Gene-commentary_text (Pathways, if heading == Pathways)
+            Gene-commentary_comment (Interactions, if heading == Interactions)
+            (Conserved Domains, if heading == Conserved Domains)
+            (Function, if label == Function)
+            (Component, if label == Component)
+            (Process, if label == Process)
+    Entrezgene_properties
+        Gene-commentary/Gene-commentary_comment
+    Entrezgene_prot
+        Prot-ref/Prot-ref_name
+            Prot-ref_name_E (Alternative Name)
+</code></pre>
 
 <h6>
 <a name="the-structure-of-the-gene-cache-directory" class="anchor" href="#the-structure-of-the-gene-cache-directory"><span class="octicon octicon-link"></span></a>The structure of the gene cache directory</h6>
