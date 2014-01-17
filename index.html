@@ -46,7 +46,7 @@
 
 <ul>
 <li>Online search access the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
-<li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search, and does not need a network connection. Cons: the cache data may be incomplete or not up-to-date.</li>
+<li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search and does not need a network connection. Cons: the cache data may be incomplete or out of date.</li>
 </ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>genetoxml.py</code> for automatically downloading this XML copy of the database.</p>
 
 <h5>
@@ -55,7 +55,7 @@
 <p>Search terms can be specified as literal terms or as regular expressions.</p>
 
 <ul>
-<li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example due to issues with upper and lower case letters.</li>
+<li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example due to issues with upper- and lower-case letters.</li>
 <li>Regular expressions are much more flexible than literal terms, but they require more expertise from the user.</li>
 </ul><h6>
 <a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h6>
@@ -77,7 +77,7 @@
 
 <ol>
 <li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given three extra columns summarising the search results. The extra columns are explained below in an example.</li>
-<li>A HTML report file showing more detailed search results for each gene. This includes hyper-links back to the relevant entries in the NCBI website for easy follow-up investigation.</li>
+<li>A HTML report file showing more detailed search results for each gene. This includes hyperlinks back to the relevant entries in the NCBI website for easy follow-up investigation.</li>
 </ol><h6>
 <a name="simple-example-of-inputs-and-outputs" class="anchor" href="#simple-example-of-inputs-and-outputs"><span class="octicon octicon-link"></span></a>Simple example of inputs and outputs</h6>
 
@@ -133,9 +133,7 @@ s888,ABC,PALB2,snp
 s100,ABC,CHECK2,snp
 </code></pre>
 
-<p>Notice that there are multiple columns in each row. The only column that Annokey considers is the one with the header "Gene".</p>
-
-<p>Annokey will preserve the other columns in its output, and add its own annoations at the end of each row.</p>
+<p>Notice that there are multiple columns in each row. Annokey only requires the "Gene" column, the other columns are ignored as far as the search is concerned, but are preserved in the output file.</p>
 
 <h6>
 <a name="the-search-term-file-must-be-formatted-as-follows" class="anchor" href="#the-search-term-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The search term file must be formatted as follows:</h6>
@@ -143,7 +141,7 @@ s100,ABC,CHECK2,snp
 <ul>
 <li>Each search term must appear on a separate line.</li>
 <li>A search term may be either a literal phrase or a regular expression.</li>
-<li>Literal phrases may contain one or more words. Literal phrases are matched exactly by Annokey. This includes character case. For example "DNA" is considered to be different to "dna".</li>
+<li>Literal phrases may contain one or more words. Literal phrases are matched exactly by Annokey. For example "DNA" is considered to be different to "dna".</li>
 <li>Regular expressions must start with the word "regex" and then be followed by a valid Python regular expression. The <a href="http://docs.python.org/2/howto/regex.html">Python regular expression HOWTO</a> provides a good tutorial on the topic.</li>
 <li>Search terms are ranked based on their relative order in the file. The search term on line 1 has rank 1 and so on. Thus the most important search term appears on the first line of the file. The second most important term appears on the second line, and so forth.</li>
 </ul><p>A literal search term might look like this:</p>
@@ -173,10 +171,10 @@ s100,ABC,CHECK2,snp
 <h3>
 <a name="online-versus-offline-search" class="anchor" href="#online-versus-offline-search"><span class="octicon octicon-link"></span></a>Online versus offline search</h3>
 
-<p>Annokey obtains its search results by querying the NCBI gene database. It can access that data in two ways:</p>
+<p>Annokey obtains its search results by querying the NCBI gene database and the linked PubMed article abstracts. It can access the data in two ways:</p>
 
 <ol>
-<li>By sending queries to the online database via the Entrez programming interface.</li>
+<li>By sending queries to the online database via the <a href="http://en.wikipedia.org/wiki/Entrez">Entrez</a> programming interface.</li>
 <li>By searching in a locally cached copy of the data.</li>
 </ol><p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
 
