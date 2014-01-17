@@ -393,7 +393,10 @@ optional arguments:
 <h3>
 <a name="technical-details" class="anchor" href="#technical-details"><span class="octicon octicon-link"></span></a>Technical details</h3>
 
-<p>The structure of the gene cache directory is as follows:</p>
+<h6>
+<a name="the-structure-of-the-gene-cache-directory" class="anchor" href="#the-structure-of-the-gene-cache-directory"><span class="octicon octicon-link"></span></a>The structure of the gene cache directory</h6>
+
+<p>The local cache of NCBI Gene database entries is structured as follows:</p>
 
 <pre><code>genecache
     organism (e.g. human, mouse)
@@ -419,6 +422,23 @@ optional arguments:
 <p>Which means that PALB2 will be found in genecache/human/163/PALB2/79728. The actual data is stored in the file called 79728, which is in XML format. The number 79728 is the NCBI Gene database ID of the PALB2, which is also reflected in the URL to access the entry in the online database <a href="http://www.ncbi.nlm.nih.gov/gene/79728">http://www.ncbi.nlm.nih.gov/gene/79728</a>.</p>
 
 <p>Also note that we normalise the gene name when it is stored in the cache to be all uppercase characters, which means we can reliably find the gene regardless of how it was written in the input gene file or stored in the NCBI database.</p>
+
+<h6>
+<a name="the-structure-of-the-pubmed-cache-directory" class="anchor" href="#the-structure-of-the-pubmed-cache-directory"><span class="octicon octicon-link"></span></a>The structure of the PubMed cache directory</h6>
+
+<p>The local cache of PubMed database entries is structured as follows:</p>
+
+<pre><code>pubmedcache
+    hash_dir (a numbered directory in the range [0,255])
+        PubMed ID (XML file, an integer)
+</code></pre>
+
+<p>Each PubMed entry has a unique integer ID. Similar to the gene cache, we spread all entries across 256 sub-directories, using the formula:</p>
+
+<pre><code>md5(PudMed_ID) % 256
+</code></pre>
+
+<p>Each PubMed entry is stored in an XML file whose name is equal to its PubMed ID.</p>
       </section>
     </div>
 
