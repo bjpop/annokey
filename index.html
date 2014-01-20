@@ -39,7 +39,7 @@
 <h3>
 <a name="license" class="anchor" href="#license"><span class="octicon octicon-link"></span></a>License</h3>
 
-<p>Annokey is open source software, released under the <a href="https://github.com/bjpop/annokey/blob/master/LICENSE.txt">three clause BSD lincense</a>.</p>
+<p>Annokey is open source software, released under the <a href="https://github.com/bjpop/annokey/blob/master/LICENSE.txt">3-clause BSD lincense</a>.</p>
 
 <h3>
 <a name="features" class="anchor" href="#features"><span class="octicon octicon-link"></span></a>Features</h3>
@@ -50,7 +50,7 @@
 <a name="online-and-offline-search" class="anchor" href="#online-and-offline-search"><span class="octicon octicon-link"></span></a>Online and offline search</h6>
 
 <ul>
-<li>Online search access the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
+<li>Online search of the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
 <li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search and does not need a network connection. Cons: the cache data may be incomplete or out of date.</li>
 </ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described below) for automatically downloading this XML copy of the database.</p>
 
@@ -141,7 +141,7 @@ s100,ABC,CHECK2,snp
 <p>Notice that there are multiple columns in each row. Annokey only requires the "Gene" column, the other columns are ignored as far as the search is concerned, but are preserved in the output file.</p>
 
 <h6>
-<a name="the-search-term-file-must-be-formatted-as-follows" class="anchor" href="#the-search-term-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The search term file must be formatted as follows:</h6>
+<a name="the-search-terms-file-must-be-formatted-as-follows" class="anchor" href="#the-search-terms-file-must-be-formatted-as-follows"><span class="octicon octicon-link"></span></a>The search terms file must be formatted as follows:</h6>
 
 <ul>
 <li>Each search term must appear on a separate line.</li>
@@ -214,7 +214,7 @@ optional arguments:
                         into this directory
   --pubmedcache DIR     Save a cache of the downloaded results from NCBI
                         pubmed into this directory
-  --terms FILE          The tab separated file containing the search-terms to
+  --terms FILE          The tab separated file containing the search terms to
                         be searched.
   --genes FILE          The tab separated file containing the gene information
                         including name of the gene, one gene name per line.
@@ -349,7 +349,7 @@ Done.
                                      [--downloadonly] [--convertonly GENEFILE]
                                      [--gene2xmlpath PROGRAMPATH]
 
-This program downloads gene data from the ftp server and converting data to
+This program downloads gene data from the ftp server and converts data to
 xml file by using linux.gene2xml tool. This program checks the last modified
 time of the database in the server, when it tries to download the gene
 database from the server. If the same version of database is in the local
