@@ -3,7 +3,7 @@
 '''NCBI Gene Downloading Tool
 
 This program downloads gene data from the ftp server and \
-converting data to xml file by using linux.gene2xml tool.
+converts data to xml file by using linux.gene2xml tool.
 This program checks the last modified time of the database in the server, \
 when it tries to download the gene database from the server. \
 If the same version of database is in the local directory already, \
@@ -72,7 +72,7 @@ def convert_genetoxml(program, infile, outfile):
         def __str__(self):
             return repr(self.value)
 
-    print_verbose(1, 'Starts converting %s to %s.' % (infile, outfile))
+    print_verbose(1, 'Started converting %s to %s.' % (infile, outfile))
     print_verbose(2, '  >> Converting ...')
     try:
         ret = subprocess.check_output([program, '-i', infile,
@@ -85,7 +85,7 @@ def convert_genetoxml(program, infile, outfile):
         if os.path.exists(outfile):
             os.remove(outfile)
         outfile = None
-        print_verbose(0, 'Error occurs while converting data.')
+        print_verbose(0, 'Error occurred while converting data.')
         print_verbose(0, '  [Error Log] ' + str(e))
 
     except KeyboardInterrupt:

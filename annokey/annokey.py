@@ -23,12 +23,12 @@ For offline search, there is the option --loadCache, which
 accepts an xml file for gene information. 
 
 The search results are appended at the end of column of the
-input gene file with the information about the search-term hit,
-the search-term rank, and the section where the search-term hit.
+input gene file with the information about the search term hit,
+the search term rank, and the section where the search term hit.
 
 Required inputs:
 
-    --terms FILENAME   a text file of search-terms. One term per line.
+    --terms FILENAME   a text file of search terms. One term per line.
 
     --genes FILENAME   a text file of gene information, one gene per line.
                        Format is tab separated. Must contain at least one
@@ -292,8 +292,8 @@ def summarise_hits(hits):
 
 def search_terms(args, report_page):
 
-    # build a list of all the search-terms in the order that they
-    # appear in the search-terms file (rank order)
+    # build a list of all the search terms in the order that they
+    # appear in the search terms file (rank order)
     terms = []
     with open(args.terms) as termsfile:
         for line in termsfile:
@@ -322,9 +322,9 @@ def search_terms(args, report_page):
                     writer.writerow(output_row + hits_output)
 
 
-# Search for each search-term in the XML file for a gene. A hit is yielded for
-# each search-term. If a gene has multiple files, we search each one separately.
-# This means it is possible to get multiple hits for the same search-term 
+# Search for each search term in the XML file for a gene. A hit is yielded for
+# each search term. If a gene has multiple files, we search each one separately.
+# This means it is possible to get multiple hits for the same search term 
 # but from different files. XXX we should annotate each hit with the database
 # file ID
 def search_terms_gene_iter(args, gene_name, search_terms):
@@ -424,7 +424,7 @@ def parse_args():
                         type=str,
                         required=True,
                         help='The tab separated file containing '
-                             'the search-terms to be searched.')
+                             'the search terms to be searched.')
 
     parser.add_argument('--genes',
                         metavar='FILE',
