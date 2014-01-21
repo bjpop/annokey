@@ -388,10 +388,10 @@ def parse_args():
                         action='store_true',
                         help='Search gene information from online (NCBI).')
 
-    parser.add_argument('--xml',
+    parser.add_argument('--cachesnapshot',
                         metavar='FILE',
                         type=str,
-                        help='Populate gene information from downloaded XML dump of NCBI gene database')
+                        help='Populate the gene cache from downloaded XML snapshot of NCBI gene database')
 
     parser.add_argument('--organism',
                         type=str,
@@ -422,14 +422,12 @@ def parse_args():
     parser.add_argument('--terms',
                         metavar='FILE',
                         type=str,
-                        required=True,
                         help='The tab separated file containing '
                              'the search terms to be searched.')
 
     parser.add_argument('--genes',
                         metavar='FILE',
                         type=str,
-                        required=True,
                         help='The tab separated file containing '
                              'the gene information including '
                              'name of the gene, one gene name per line.')
@@ -446,7 +444,7 @@ def parse_args():
                         help='Save a detailed search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
                         default=DEFAULT_REPORT_FILE)
 
-    return parser.parse_args()
+    return parser
 
 
 def get_gene_delimiter(args):
@@ -464,7 +462,8 @@ def get_gene_delimiter(args):
         return DEFAULT_GENE_DELIMITER
 
 def main():
-    args = parse_args()
+    args_parser = parse_args()
+    args = args_parser.parse_args()
 
     if args.log:
         logging.basicConfig(filename=args.log,
@@ -475,30 +474,33 @@ def main():
     command_line_text = "annokey " + ' '.join(sys.argv[1:])
     logging.info('command line: {0}'.format(command_line_text))
 
-    args.delimiter = get_gene_delimiter(args)
+    if not ((args.terms and args.genes) or args.cachesnapshot):
+        print("\nERROR: Annokey requires --terms AND --genes OR --cachesnapshot\n")
+        args_parser.print_help()
+        exit()
 
-    if args.xml:
+    if args.cachesnapshot:
         # Get gene information from specified XML file.
         # Populate the genecache from the contents of the file. 
-        with open(args.xml) as xml_file:
+        with open(args.cachesnapshot) as xml_file:
             save_gene_cache(args.genecache, args.organism, xml_file)
 
-    elif args.online:
-        # Get gene information online.
-        if args.email:
-            Entrez.email = args.email
-        else:
-            exit('An email address is required for online queries, use the --email flag')
+    # only perform search if terms and genes are specified
+    if args.genes and args.terms:
+        if args.online:
+            # Get gene information online.
+            if args.email:
+                Entrez.email = args.email
+            else:
+                exit('An email address is required for online queries, use the --email flag')
+            # fetch gene and pubmed records and save them in cache. 
+            fetch_records(args)
 
-        # fetch gene and pubmed records and save them in cache. 
-        fetch_records(args)
-
-    report_page = init_report_page(command_line_text)
-
-    # Get gene information from cache.
-    search_terms(args, report_page)
-
-    write_report(args.report, report_page)
+        args.delimiter = get_gene_delimiter(args)
+        report_page = init_report_page(command_line_text)
+        # Get gene information from cache.
+        search_terms(args, report_page)
+        write_report(args.report, report_page)
 
 
 if __name__ == '__main__':

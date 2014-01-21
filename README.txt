@@ -38,10 +38,10 @@ likely to be highly correlated with their domain of interest.
 Command line usage:
 --------------------------------------------------------------------------------
 
-usage: annokey [-h] [--version] [--online] [--xml FILE] [--organism ORGANISM]
-               [--email EMAIL_ADDRESS] [--genecache DIR] [--pubmedcache DIR]
-               --terms FILE --genes FILE [--log FILENAME]
-               [--delimiter {comma,tab}] [--report FILENAME]
+usage: annokey [-h] [--version] [--online] [--cachesnapshot FILE]
+               [--organism ORGANISM] [--email EMAIL_ADDRESS] [--genecache DIR]
+               [--pubmedcache DIR] [--terms FILE] [--genes FILE]
+               [--log FILENAME] [--delimiter {comma,tab}] [--report FILENAME]
 
 Search NCBI for genes of interest, based on concept-keyword search.
 
@@ -49,8 +49,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
   --online              Search gene information from online (NCBI).
-  --xml FILE            Populate gene information from downloaded XML dump of
-                        NCBI gene database
+  --cachesnapshot FILE  Populate the gene cache from downloaded XML snapshot
+                        of NCBI gene database
   --organism ORGANISM   Name of the organism to search
   --email EMAIL_ADDRESS
                         Your email address. This is required by NCBI for
@@ -60,7 +60,7 @@ optional arguments:
                         into this directory
   --pubmedcache DIR     Save a cache of the downloaded results from NCBI
                         pubmed into this directory
-  --terms FILE          The tab separated file containing the search-terms to
+  --terms FILE          The tab separated file containing the search terms to
                         be searched.
   --genes FILE          The tab separated file containing the gene information
                         including name of the gene, one gene name per line.
