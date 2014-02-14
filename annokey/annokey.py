@@ -4,7 +4,7 @@
 --------------------------------------------------------------------------------
 
 Annokey: a NCBI Gene Database Keyword Search Tool
--------------------------------------------------
+------------------------------------------------
 
 Authors:   Daniel Park, Sori Kang, Bernie Pope, Tu Nguyen-Dumont.
 Copyright: 2013
@@ -48,12 +48,14 @@ from StringIO import StringIO
 import itertools
 import cPickle as pickle
 import logging
-from process_xml import GeneParser, Hit
+from process_xml import GeneParser, GeneHit
 from version import annokey_version
 from genecache import (lookup_gene_cache_iter, stable_string_hash,
     make_gene_cache_dirname, save_gene_cache)
 from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
 from search_term import (parse_search_term)
+import socket
+from name import program_name
 
 DEFAULT_LOG_FILE = 'annokey_log.txt'
 
@@ -101,7 +103,12 @@ def get_gene_names(args, genefilename):
             yield name
 
 
-def get_gene_ids(args, genefilename, organism='Homo sapiens'):
+
+"""
+def get_gene_ids(args):
+
+    genefilename = args.genes
+    organism = args.organism
 
     def chunk_gene_names(genefilename, chunk_size):
         names = []
@@ -123,20 +130,21 @@ def get_gene_ids(args, genefilename, organism='Homo sapiens'):
         result = Entrez.read(request)
         gene_ids.update(result['IdList'])
     return gene_ids
+"""
 
 
 # For each gene in genesfile we read PubMedIds using genecache.
-def get_pubmed_ids(args):
-    pubmed_ids = set()
-    
-    with open(args.genes) as genesfile:
-        reader = csv.DictReader(genesfile, delimiter=args.delimiter)
-        for row in reader:
-            genename = row['Gene'].strip()
-            for gene_xml in lookup_gene_cache_iter(args, genename):
-                pubmed_ids.update(GeneParser.pubmed_ids(gene_xml))
-
-    return pubmed_ids
+#def get_pubmed_ids(args):
+#    pubmed_ids = set()
+#    
+#    with open(args.genes) as genesfile:
+#        reader = csv.DictReader(genesfile, delimiter=args.delimiter)
+#        for row in reader:
+#            genename = row['Gene'].strip()
+#            for gene_db_id, cached_filepath in lookup_gene_cache_iter(args, genename):
+#                pubmed_ids.update(GeneParser.pubmed_ids(gene_xml))
+#
+#    return pubmed_ids
 
 
 def fetch_and_save_pubmed_records(cachedir, ids):
@@ -225,12 +233,10 @@ def lookup_pubmed_ids(ids):
 
 
 # assume input is a set
+"""
 def fetch_records_from_ids(ids):
 
     db = 'gene'
-
-    # Before posting, make a list of unique Ids
-    #uniqIds = make_unique_list(ids)
     idString = ','.join(list(ids))
     postRequest = Entrez.epost(db=db, id=idString)
     postResult = Entrez.read(postRequest)
@@ -241,6 +247,7 @@ def fetch_records_from_ids(ids):
                                  query_key=queryKey,
                                  retmode='xml')
     return fetchRequest.read()
+"""
 
 
 def merge_geneContent(geneContent, values):
@@ -258,6 +265,36 @@ def merge_geneContent(geneContent, values):
     for key, value in values:
         geneContent[key] += value 
     return geneContent
+
+def aggregate_hits(hits):
+    '''Aggregate information about all the hits for a search term
+    and a given gene.
+
+    Result is a dictionary indexed by search term.
+
+    Each search term points to a dictionary indexed by field name
+    (the place in the database where the term was matched).
+
+    Each field name points to a list of contexts (strings surrounding
+    the matched term.
+    '''
+    term_dict = {}
+    for h in hits:
+        term = str(h.search_term)
+        field = h.field
+        contexts = h.contexts
+        rank = h.rank
+        if (rank, term) in term_dict:
+            term_fields = term_dict[(rank, term)]
+            if field in term_fields:
+                term_field_contexts = term_fields[field]
+                term_field_contexts.extend(contexts)
+            else:
+                term_fields[field] = contexts
+        else:
+            term_fields = {field: contexts}
+            term_dict[(rank, term)] = term_fields
+    return term_dict
 
 
 def summarise_hits(hits):
@@ -295,9 +332,13 @@ def search_terms(args, report_page):
     # build a list of all the search terms in the order that they
     # appear in the search terms file (rank order)
     terms = []
-    with open(args.terms) as termsfile:
-        for line in termsfile:
-            terms.append(parse_search_term(line))
+
+    try:
+        with open(args.terms) as termsfile:
+            for line in termsfile:
+                terms.append(parse_search_term(line))
+    except EnvironmentError as e:
+        exit("{}: failed to open terms file: {}".format(program_name, e))
 
     if len(terms) > 0:
         with open(args.genes) as genesfile:
@@ -311,26 +352,63 @@ def search_terms(args, report_page):
             # print the row out with the hits annoated on the end
             for input_row in reader:
                 try:
-                    genename = input_row['Gene'].strip()
+                    gene_name = input_row['Gene'].strip()
                 except KeyError:
-                    exit("Can't find Gene column in input gene file")
+                    exit("{}: can't find Gene column in input gene file".format(program_name))
                 else:
-                    hits = list(search_terms_gene_iter(args, genename, terms))
-                    report_hits(genename, hits, report_page)
-                    hits_output = summarise_hits(hits) 
-                    output_row = [input_row[field] for field in reader.fieldnames]
-                    writer.writerow(output_row + hits_output)
+                    for gene_db_id, gene_xml in get_gene_records(args, gene_name):
+                        hits = list(GeneParser.term_hit(args, gene_xml, terms))
+                        all_hits = aggregate_hits(hits)
+                        report_hits(gene_name, gene_db_id, all_hits, report_page)
+                    #for gene_db_id, gene_file_path in lookup_gene_cache_iter(args, gene_name):
+                    #    with open(gene_file_path) as gene_xml:
+                    #        hits = list(GeneParser.term_hit(gene_xml, terms, args.pubmedcache))
+                    #        all_hits = aggregate_hits(hits)
+                    #        report_hits(gene_name, gene_db_id, all_hits, report_page)
+                    #hits_output = summarise_hits(hits) 
+                    #output_row = [input_row[field] for field in reader.fieldnames]
+                    #writer.writerow(output_row + hits_output)
 
+def get_gene_records(args, gene_name):
+    if args.online:
+        gene_ids = get_gene_ids(args, gene_name)
+        for gene_id in gene_ids:
+            gene_records_xml = fetch_records_from_ids(gene_ids)
+            yield gene_id, gene_records_xml
+    else:
+       for gene_db_id, gene_file_path in lookup_gene_cache_iter(args, gene_name):
+           try:
+               with open(gene_file_path) as gene_xml_file:
+                   gene_xml_contents = gene_xml_file.read()
+           except EnvironmentError as e:
+               exit("{}: failed to open gene XML file: {}".format(gene_file_path, e))
+           yield gene_db_id, gene_xml_contents
 
-# Search for each search term in the XML file for a gene. A hit is yielded for
-# each search term. If a gene has multiple files, we search each one separately.
-# This means it is possible to get multiple hits for the same search term 
-# but from different files. XXX we should annotate each hit with the database
-# file ID
-def search_terms_gene_iter(args, gene_name, search_terms):
-    for gene_xml in lookup_gene_cache_iter(args, gene_name):
-        for hit in GeneParser.term_hit(gene_xml, search_terms, args.pubmedcache):
-            yield hit
+def get_gene_ids(args, gene_name):
+    genefilename = args.genes
+    organism = args.organism
+    search_term = '{}[organism] AND {}[sym]'.format(organism, gene_name)
+    request = Entrez.esearch(db='gene', term=search_term, retmax=1000)
+    try:
+        result = Entrez.read(request)['IdList']
+    except Exception as e:
+        logging.warn("Cannot get gene ids for gene {}: {}".format(gene_name, e))
+        return []
+    else:
+        return result
+
+def fetch_records_from_ids(ids):
+    db = 'gene'
+    idString = ','.join(list(ids))
+    postRequest = Entrez.epost(db=db, id=idString)
+    postResult = Entrez.read(postRequest)
+    webEnv = postResult['WebEnv']
+    queryKey = postResult['QueryKey']
+    fetchRequest = Entrez.efetch(db=db,
+                                 webenv=webEnv,
+                                 query_key=queryKey,
+                                 retmode='xml')
+    return fetchRequest.read()
 
 
 def make_pubmed_cache_dirname(cachedir, pubmed_id):
@@ -359,6 +437,7 @@ def save_pubmed_cache(cachedir, pubmed_records_xml):
             del pubmed_entry.getparent()[0]
 
 
+'''
 def fetch_records(args):
     # fetch gene records and pubmed records and save them in cache.
 
@@ -371,10 +450,11 @@ def fetch_records(args):
 
     # pubmed records
     # get pubmed ids from each gene records
-    pubmed_ids = get_pubmed_ids(args)
+    #pubmed_ids = get_pubmed_ids(args)
     # fetch the corresponding XML records for pubmed ids
     # cache the pubmed records
     fetch_and_save_pubmed_records(args.pubmedcache, pubmed_ids)
+'''
 
 
 def parse_args():
@@ -444,6 +524,10 @@ def parse_args():
                         help='Save a detailed search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
                         default=DEFAULT_REPORT_FILE)
 
+    parser.add_argument('--allmatches',
+                        help='Return all the matches of a search term in a database field, not just the first one',
+                        action='store_true')
+
     return parser
 
 
@@ -472,7 +556,11 @@ def main():
                         format='%(asctime)s %(message)s',
                         datefmt='%m/%d/%Y %H:%M:%S')
     command_line_text = "annokey " + ' '.join(sys.argv[1:])
-    logging.info('command line: {0}'.format(command_line_text))
+    working_directory = os.getcwd()
+    hostname = socket.gethostname()
+    logging.info('hostname: {}'.format(hostname))
+    logging.info('working directory: {}'.format(working_directory))
+    logging.info('command line: {}'.format(command_line_text))
 
     if not ((args.terms and args.genes) or args.cachesnapshot):
         print("\nERROR: Annokey requires --terms AND --genes OR --cachesnapshot\n")
@@ -488,16 +576,14 @@ def main():
     # only perform search if terms and genes are specified
     if args.genes and args.terms:
         if args.online:
-            # Get gene information online.
+            #  Get gene information online.
             if args.email:
                 Entrez.email = args.email
             else:
-                exit('An email address is required for online queries, use the --email flag')
-            # fetch gene and pubmed records and save them in cache. 
-            fetch_records(args)
+                exit('{}: an email address is required for online queries, use the --email flag'.format(program_name))
 
         args.delimiter = get_gene_delimiter(args)
-        report_page = init_report_page(command_line_text)
+        report_page = init_report_page(hostname, working_directory, command_line_text)
         # Get gene information from cache.
         search_terms(args, report_page)
         write_report(args.report, report_page)

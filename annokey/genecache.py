@@ -7,17 +7,21 @@ import hashlib
 import logging
 
 def lookup_gene_cache_iter(args, gene_name):
+    '''Gene records are stored in a file which is named using the
+    NCBI gene databse ID.
+    This generator searches for a gene name in the gene database and yields all
+    the database entries that match that gene (there could be more than one).
+    It returns the full path to the cached file plus the database entry ID.
+    '''
     gene_cache_dir = make_gene_cache_dirname(args.genecache, args.organism, gene_name)
     try:
         dir_contents = os.listdir(gene_cache_dir)
     except OSError:
         logging.info("Could not find cache entry for {}".format(gene_name))
         return
-    for filename in os.listdir(gene_cache_dir):
-        file = '%s/%s' % (gene_cache_dir, filename)
-        file = open(file)
-        yield file
-        file.close()
+    for geneDatabaseID in os.listdir(gene_cache_dir):
+        filepath = os.path.join(gene_cache_dir, geneDatabaseID)
+        yield geneDatabaseID, filepath 
 
 def stable_string_hash(str):
     '''A hash function for strings based on MD5 hashing which should be stable

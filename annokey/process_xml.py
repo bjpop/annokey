@@ -18,44 +18,34 @@ from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
 import itertools
+import logging
 
-
-class Hit(object):
-    def __init__(self, search_term, rank, database_record_id, fields):
+class GeneHit(object):
+    def __init__(self, search_term, rank, field, contexts):
         self.search_term = search_term # string
         self.rank = rank # int
-        self.fields = fields # [string]
-        self.database_record_id = database_record_id # int
+        self.field = field # string, name of location where hit occurred
+        self.contexts = contexts # [string], context of matching hits
 
     def __str__(self):
-        return '(kw: {}, rank: {}, ncbi id: {}, fields: {})'.format(
-            self.search_term,self.rank, self.database_record_id, ';'.join(self.fields))
-
+        return '(term: {}, rank: {}, field: {}, contexts: {})'.format(
+           self.search_term, self.rank, self.field, str(self.contexts))
 
 class GeneParser(object):
     
     @staticmethod
-    def term_hit(xmlfile, search_terms, pubmed_cachedir):
-        # parse given xmlfile and extract what we are interested in.
+    def term_hit(args, xml, search_terms):
+        # parse given xml and extract what we are interested in.
         # look up search_terms from extracted content of gene.
-        parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
+        parser = etree.iterparse(StringIO(xml), events=('end',), tag='Entrezgene')
         for event, geneEntry in parser:
-            # XXX We use intermidiate Dictionary at the moment rather than
-            # scanning XML file directly, since iterating dictionary N times
-            # may be faster than scanning XML file N times when
-            # there are N search_terms.
             geneId, content = get_geneContent(geneEntry)
-            pubmed_hits = search_terms_in_pubmed(pubmed_cachedir, content["PmIds"], search_terms, geneId)
-            for hit in search_terms_inDict(content, search_terms, geneId):
-                # If search_term is also in PubMed, append PubMed to field.
-                if hit.search_term in pubmed_hits:
-                    hit.fields += pubmed_hits[hit.search_term].fields
-                    del pubmed_hits[hit.search_term]
+            for hit in search_terms_in_dict(args, content, search_terms, geneId):
                 yield hit
-            # For the remaining PubMed hits
-            for search_term, hit in pubmed_hits.iteritems():
+            for hit in search_terms_in_pubmed(args, content["PmIds"], search_terms, geneId):
                 yield hit
 
+    '''
     @staticmethod
     def pubmed_ids(xmlfile):
         # parse given xmlfile and extract pubmed ids.
@@ -69,70 +59,101 @@ class GeneParser(object):
                     if pubMedId is not None and pubMedId.text is not None:
                         pmids.append(pubMedId.text)
         return set(pmids)
+    '''
 
 
 class PubMedParser(object):
 
     @staticmethod
-    def term_hit(xmlfile, search_terms):
+    def term_hit(args, xml, search_terms):
         # Parse the given xmlfile and return search_terms hit.
-        parser = etree.iterparse(xmlfile, events=('end',), tag='PubmedArticle')
+        parser = etree.iterparse(StringIO(xml), events=('end',), tag='PubmedArticle')
         for event, pubmed_entry in parser:
             content =  get_pubmed_content(pubmed_entry)
             # scan title and abstract only for search_term search.
             title_abst = ''
             try:
-                title_abst += content['Article Title']
-                title_abst += content['Abstract']
+                title_abst = content['Article Title'] + ' ' + content['Abstract']
             except KeyError:
                 pass
-            termsHit = []
-            for search_term in search_terms:
-                if search_term.search(title_abst):
-                    termsHit.append(search_term)
-            return termsHit
+            for rank, search_term in enumerate(search_terms, 1):
+                matches = search_term.search(args, title_abst)
+                if len(matches) > 0:
+                    yield GeneHit(search_term, rank, 'PubMed', matches)
 
+def search_terms_in_pubmed(args, ids, search_terms, gene_id):
+    for pubmed_record in get_pubmed_records(args, ids):
+        for hit in PubMedParser.term_hit(args, pubmed_record, search_terms):
+            yield hit
 
-# For caching PubMed search_term search history
-pubmed_hit_cache = {}
+# Keep a in-memory cache of pubmed records indexed by the Pubmed id.
+# Stops us from requesting it again from online, or from looking again
+# in the file cache.
+seen_pubmed_records = {}
 
-# Search search_terms in PubMed articles. Return a list of Hit.
-# We manange pubmed_hit_cache to avoid repeated cache lookup. 
-def search_terms_in_pubmed(cachedir, ids, search_terms, gene_id):
-    search_term_hits = {}
+def get_pubmed_records(args, ids):
+    new_ids = set()
+
+    # Check for records that we've previously already retrieved.
     for id in ids:
-        # For each PubMed article, look up hit history first,
-        # If no history in hit cache, look up PubMed file.
-        search_term_hit = []
-        try:
-            search_term_hit = pubmed_hit_cache[id]
-        except KeyError:
-            pubmed_file = lookup_pubmed_cache(cachedir, id)
+        if id in seen_pubmed_records:
+            yield seen_pubmed_records[id]
+        else:
+            new_ids.add(id)
+
+    if args.online:
+        # Each record from online search could contain many pubmed records.
+        # So we split them up and save them individually in the 
+        # seen_pubmed_records dictionary.
+        for record in fetch_pubmed_records_online(new_ids):
+            parser = etree.iterparse(StringIO(record), events=('end',), tag='PubmedArticle')
+            for event, pubmed_entry in parser:
+                # Find pubmed id
+                pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
+                record = etree.tostring(pubmed_entry)
+                seen_pubmed_records[pubmed_id] = record
+                # free up memory used by the XML iterative parser
+                pubmed_entry.clear()
+                while pubmed_entry.getprevious() is not None:
+                    del pubmed_entry.getparent()[0]
+                yield record
+    else:
+        # look for the records in the file cache
+        for id in new_ids:
+            pubmed_file = lookup_pubmed_cache(args.pubmedcache, id)
             if pubmed_file is not None:
-                search_term_hit = PubMedParser.term_hit(pubmed_file, search_terms)
-                pubmed_hit_cache[id] = search_term_hit
+                seen_pubmed_records[id] = pubmed_file
+                yield pubmed_file 
             else:
-                pass
-                # XXX maybe should log an error
-                #print("did not find PubMed {} in cache:".format(id))
+                logging.info("Could not find pubmed article {} in cache".format(id))
 
-        # Increase hit counts.
-        for search_term in search_term_hit:
+
+def fetch_pubmed_records_online(ids):
+    if len(ids) > 0:
+        idString = ','.join(ids)
+        postRequest = Entrez.epost(db='pubmed', id=idString)
+        postResult = Entrez.read(postRequest)
+        webEnv = postResult['WebEnv']
+        queryKey = postResult['QueryKey']
+        retstart = 0
+        chunk_size = 10000
+
+        while retstart < len(ids):
             try:
-                search_term_hits[search_term] += 1
-            except KeyError:
-                search_term_hits[search_term] = 1
+                fetch_request = Entrez.efetch(db='pubmed',
+                                              webenv=webEnv,
+                                              query_key=queryKey,
+                                              retmode='xml',
+                                              retmax=chunk_size,
+                                              retstart=retstart)
+                yield fetch_request.read()
 
-    # Make a list of Hit
-    for n, search_term in enumerate(search_terms):
-        # XXX there are duplicated search_terms with different ranks.
-        # So, we need to check the count is int or not.
-        if search_term in search_term_hits:
-            count = search_term_hits[search_term]
-            if isinstance(count, int):
-                field = ["PMID({}/{})".format(search_term_hits[search_term], len(ids))]
-                search_term_hits[search_term] = Hit(search_term, n+1, gene_id, field)
-    return search_term_hits
+            except Exception as e:
+                logging.warn("pubmed fetch failed: {}".format(e))
+                break
+
+            retstart += chunk_size
+
 
 
 def lookup_pubmed_cache(cachedir, id):
@@ -142,6 +163,7 @@ def lookup_pubmed_cache(cachedir, id):
         return pubmed_filename
 
 
+'''
 def lookup_pubmed_ids(ids):
     not_cached_ids = []
     # search for all the cached pubmed ids first, and
@@ -194,25 +216,8 @@ def lookup_pubmed_ids(ids):
                 del pubmed_entry.getparent()[0]
         del content
         retstart += chunk_size
+'''
 
-
-# assume input is a set
-def fetch_records_from_ids(ids):
-
-    db = 'gene'
-
-    # Before posting, make a list of unique Ids
-    #uniqIds = make_unique_list(ids)
-    idString = ','.join(list(ids))
-    postRequest = Entrez.epost(db=db, id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    fetchRequest = Entrez.efetch(db=db,
-                                 webenv=webEnv,
-                                 query_key=queryKey,
-                                 retmode='xml')
-    return fetchRequest.read()
 
 # What to be saved is
 # <PubmedArticle
@@ -331,7 +336,7 @@ def parse_geneCommentary(commentary):
 
     rifs = []
     pathways = []
-    pmids = []
+    pmids = set()
     interactions = []
     conserved = []
     functions = []
@@ -361,7 +366,7 @@ def parse_geneCommentary(commentary):
             for pub in item.iterchildren():
                 pubMedId = pub.find('.//Pub_pmid/PubMedId')
                 if pubMedId is not None and pubMedId.text is not None:
-                    pmids.append(pubMedId.text)
+                    pmids.add(pubMedId.text)
             retValues.append(('PmIds', pmids))
 
         if item.tag == 'Gene-commentary_products':
@@ -415,9 +420,6 @@ def parse_geneCommentary(commentary):
 
     return retValues
 
-# XXX
-# Dictionary vs Class having attributes
-# Not sure about the benefits of Class compared to Dictionary. 
 def get_geneContent(geneEntry):
     '''Parse element Entrezgene.'''
 
@@ -485,42 +487,10 @@ def get_geneContent(geneEntry):
     return (geneId, geneContent)
 
 
-def search_terms_inDict(dbEntry, search_terms, geneId):
-    '''Search top N ranking search_terms from dbEntry.
-       dbEntry is a dictionary which contains information of each field.
-       The value of each key is a list.
-       e.g) {'AlterName' : ['abc', 'def'], ...}
-       Returns a list of tuples containging
-                         the search_term hitted,
-                         the rank of search_term, and
-                         the fields where the search_term hitted.
-    '''
-    fields = []
-    seen_fields = set()
-    for n, search_term in enumerate(search_terms):
+def search_terms_in_dict(args, dbEntry, search_terms, geneID):
+    for rank, search_term in enumerate(search_terms, 1):
         for field, content in dbEntry.iteritems():
-            if field == 'GeneRIFs':
-                hit = [search_term.search(item) for item in content]
-                if sum(hit) > 0:
-                    fields.append('%s(%s/%s)' %
-                                  (field, sum(hit), len(content)))
-            else:
-                for item in content:
-                    if search_term.search(item) and field not in fields:
-                        fields.append(field)
-        if len(fields) > 0:
-            yield Hit(search_term, n+1, geneId, fields)
-            fields = []
-
-
-def search_terms_inString(dbEntry, search_terms):
-    '''Searche search_term in the order (according to the rank) and
-       return the search_term and its rank (position in the list).
-       If fail to search, (python) returns None.
-       dbEntry is a string.
-    '''
-    termsFound = []
-    for n, item in enumerate(search_terms):
-        if item in dbEntry:
-            termsFound.append((item, n+1))
-    return termsFound
+            for item in content:
+                matches = search_term.search(args, item)
+                if len(matches) > 0:
+                    yield GeneHit(search_term, rank, field, matches)
