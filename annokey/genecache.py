@@ -1,10 +1,9 @@
-#!/bin/env python
-
 from lxml import etree
 from StringIO import StringIO
 import os
 import hashlib
 import logging
+from process_xml import get_geneContent
 
 def lookup_gene_cache_iter(args, gene_name):
     '''Gene records are stored in a file which is named using the
@@ -29,6 +28,10 @@ def stable_string_hash(str):
     matter if this is slow because we don't call it often.'''
     return int(hashlib.md5(str).hexdigest(), 16)
 
+def make_pubmed_cache_dirname(cachedir, pubmed_id):
+    hash_dir = stable_string_hash(pubmed_id) % 256
+    return os.path.join(cachedir, str(hash_dir))
+
 def make_gene_cache_dirname(cachedir, organism, gene_name):
     # we normalise the gene name to upper case.
     gene_name_upper = gene_name.upper()
@@ -38,24 +41,39 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
 
 def save_gene_cache(cachedir, organism, xml_file):
 
+    count = 0
+    pubmed_ids = set()
+
     # read each "Entrezgene" record in the input XML and write it out to
     # a cache file. Sometimes one gene will have multiple entries. We store
     # each gene entry in a file based on its database ID.
-    #parser = etree.iterparse(StringIO(gene_records_xml), events=('end',), tag='Entrezgene')
     parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
 
     for event, elem in parser:
+
+        #if count > 100:
+        #    break
+        #else:
+        #    count += 1
+
+        # get the pubmed ids
+        #commentary = elem.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
+        #if commentary is not None:
+        #    for pub in elem.iterchildren():
+        #        pubMedId = pub.find('.//Pub_pmid/PubMedId')
+        #        if pubMedId is not None and pubMedId.text is not None:
+        #            pubmed_ids.add(pubMedId.text)
+
+        geneId, content = get_geneContent(elem)
+        pubmed_ids.update(content["PmIds"]) 
+
+
         # find the official name of the gene
         gene_name_element = elem.find('.//Gene-ref_locus')
         if gene_name_element is not None:
             gene_name = gene_name_element.text
             # find the database id of the gene
             gene_id = elem.find('.//Gene-track_geneid').text
-            # hash the name of the gene into an integer in the range [0, 255]
-            #hash_dir = hash(gene_name) % 256
-            # if it doesn't already exist, create a directory in the cache for
-            # this gene
-            #gene_cache_dir = os.path.join(organism_cache_dir, str(hash_dir), gene_name)
             gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
             if not os.path.exists(gene_cache_dir):
                 os.makedirs(gene_cache_dir)
@@ -64,7 +82,10 @@ def save_gene_cache(cachedir, organism, xml_file):
             gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
             with open(gene_cache_filename, 'w') as cache_file:
                 cache_file.write(etree.tostring(elem))
-            # free up memory used by the XML iterative parser
-            elem.clear()
-            while elem.getprevious() is not None:
-                del elem.getparent()[0]
+
+        # free up memory used by the XML iterative parser
+        elem.clear()
+        while elem.getprevious() is not None:
+           del elem.getparent()[0]
+
+    return pubmed_ids

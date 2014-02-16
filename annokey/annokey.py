@@ -52,6 +52,7 @@ from process_xml import GeneParser, GeneHit
 from version import annokey_version
 from genecache import (lookup_gene_cache_iter, stable_string_hash,
     make_gene_cache_dirname, save_gene_cache)
+from pubmedcache import make_pubmed_cache_dirname
 from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
 from search_term import (parse_search_term)
 import socket
@@ -92,59 +93,6 @@ DEFAULT_GENE_DELIMITER = ','
 #and email and that violate the above usage policies may be blocked. Software
 #developers may register values of tool and email at any time, and are
 #encouraged to do so.
-
-
-# read each gene name from the gene file
-def get_gene_names(args, genefilename):
-    with open(genefilename, 'rb') as file:
-        reader = csv.DictReader(file, delimiter=args.delimiter)
-        for row in reader:
-            name = row['Gene'].strip()
-            yield name
-
-
-
-"""
-def get_gene_ids(args):
-
-    genefilename = args.genes
-    organism = args.organism
-
-    def chunk_gene_names(genefilename, chunk_size):
-        names = []
-        numbered_gene_names = enumerate(get_gene_names(args, genefilename))
-        for n, name in numbered_gene_names:
-            names.append(name.strip())
-            if (n+1) % chunk_size == 0:
-                yield names
-                names = []
-        yield names
-
-    # Send request to server for every 100 genes.
-    gene_ids = set()
-
-    for names in chunk_gene_names(genefilename, chunk_size=100):
-        terms = ' OR '.join(['%s[sym]' % name for name in names])
-        search_term = '{0}[organism] AND ({1})'.format(organism, terms)
-        request = Entrez.esearch(db='gene', term=search_term, retmax=10000)
-        result = Entrez.read(request)
-        gene_ids.update(result['IdList'])
-    return gene_ids
-"""
-
-
-# For each gene in genesfile we read PubMedIds using genecache.
-#def get_pubmed_ids(args):
-#    pubmed_ids = set()
-#    
-#    with open(args.genes) as genesfile:
-#        reader = csv.DictReader(genesfile, delimiter=args.delimiter)
-#        for row in reader:
-#            genename = row['Gene'].strip()
-#            for gene_db_id, cached_filepath in lookup_gene_cache_iter(args, genename):
-#                pubmed_ids.update(GeneParser.pubmed_ids(gene_xml))
-#
-#    return pubmed_ids
 
 
 def fetch_and_save_pubmed_records(cachedir, ids):
@@ -411,9 +359,9 @@ def fetch_records_from_ids(ids):
     return fetchRequest.read()
 
 
-def make_pubmed_cache_dirname(cachedir, pubmed_id):
-    hash_dir = stable_string_hash(pubmed_id) % 256
-    return os.path.join(cachedir, str(hash_dir))
+#def make_pubmed_cache_dirname(cachedir, pubmed_id):
+#    hash_dir = stable_string_hash(pubmed_id) % 256
+#    return os.path.join(cachedir, str(hash_dir))
 
 
 def save_pubmed_cache(cachedir, pubmed_records_xml):
@@ -568,10 +516,18 @@ def main():
         exit()
 
     if args.cachesnapshot:
+        if args.email:
+            Entrez.email = args.email
+        else:
+            exit('{}: an email address is required for accessing pubmed, use the --email flag'.format(program_name))
         # Get gene information from specified XML file.
         # Populate the genecache from the contents of the file. 
         with open(args.cachesnapshot) as xml_file:
-            save_gene_cache(args.genecache, args.organism, xml_file)
+            pubmed_ids = save_gene_cache(args.genecache, args.organism, xml_file)
+            #print("Getting {} pubmed articles".format(len(pubmed_ids)))
+            for x in pubmed_ids:
+               print(x)
+            fetch_and_save_pubmed_records(args.pubmedcache, pubmed_ids)
 
     # only perform search if terms and genes are specified
     if args.genes and args.terms:

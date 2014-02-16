@@ -19,6 +19,7 @@ from lxml import etree
 from StringIO import StringIO
 import itertools
 import logging
+from pubmedcache import make_pubmed_cache_dirname
 
 class GeneHit(object):
     def __init__(self, search_term, rank, field, contexts):
@@ -45,7 +46,6 @@ class GeneParser(object):
             for hit in search_terms_in_pubmed(args, content["PmIds"], search_terms, geneId):
                 yield hit
 
-    '''
     @staticmethod
     def pubmed_ids(xmlfile):
         # parse given xmlfile and extract pubmed ids.
@@ -59,7 +59,6 @@ class GeneParser(object):
                     if pubMedId is not None and pubMedId.text is not None:
                         pmids.append(pubMedId.text)
         return set(pmids)
-    '''
 
 
 class PubMedParser(object):
@@ -120,10 +119,15 @@ def get_pubmed_records(args, ids):
     else:
         # look for the records in the file cache
         for id in new_ids:
-            pubmed_file = lookup_pubmed_cache(args.pubmedcache, id)
-            if pubmed_file is not None:
-                seen_pubmed_records[id] = pubmed_file
-                yield pubmed_file 
+            pubmed_filename = lookup_pubmed_cache(args.pubmedcache, id)
+            if pubmed_filename is not None:
+                try:
+                    with open(pubmed_filename) as pubmed_file:
+                        pubmed_xml = pubmed_file.read()
+                        seen_pubmed_records[id] = pubmed_xml
+                        yield pubmed_xml
+                except EnvironmentError as e:
+                    logging.warn("Could not open or read pubmed file: {}".format(pubmed_filename))
             else:
                 logging.info("Could not find pubmed article {} in cache".format(id))
 
@@ -157,10 +161,13 @@ def fetch_pubmed_records_online(ids):
 
 
 def lookup_pubmed_cache(cachedir, id):
-    hashed_id = hash(id) % 256
-    pubmed_filename = os.path.join(cachedir, str(hashed_id), id)
-    if os.path.isfile(pubmed_filename):
-        return pubmed_filename
+    print("looking for {}".format(id))
+    pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, id)
+    pubmed_cache_filename = os.path.join(pubmed_cache_dir, id)
+    if os.path.isfile(pubmed_cache_filename):
+        return pubmed_cache_filename
+    else:
+        print("could not find {}".format(pubmed_cache_filename))
 
 
 '''
