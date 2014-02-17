@@ -365,8 +365,7 @@ def main():
     if args.cachesnapshot:
         # Get gene information from specified XML file.
         # Populate the genecache from the contents of the file. 
-        with open(args.cachesnapshot) as xml_file:
-            save_gene_cache(args.genecache, args.organism, xml_file)
+        save_gene_cache(args)
 
     # only perform search if terms and genes are specified
     if args.genes and args.terms:

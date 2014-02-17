@@ -5,6 +5,7 @@ import hashlib
 import logging
 from process_xml import get_geneContent
 from hash import stable_string_hash
+from name import program_name
 
 def lookup_gene_cache_iter(args, gene_name):
     '''Gene records are stored in a file which is named using the
@@ -24,10 +25,6 @@ def lookup_gene_cache_iter(args, gene_name):
         yield geneDatabaseID, filepath 
 
 
-#def make_pubmed_cache_dirname(cachedir, pubmed_id):
-#    hash_dir = stable_string_hash(pubmed_id) % 256
-#    return os.path.join(cachedir, str(hash_dir))
-
 def make_gene_cache_dirname(cachedir, organism, gene_name):
     # we normalise the gene name to upper case.
     gene_name_upper = gene_name.upper()
@@ -35,31 +32,40 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
     hash_dir = stable_string_hash(gene_name_upper) % 256
     return os.path.join(organism_cache_dir, str(hash_dir), gene_name_upper)
 
-def save_gene_cache(cachedir, organism, xml_file):
+def save_gene_cache(args):
 
-    # read each "Entrezgene" record in the input XML and write it out to
-    # a cache file. Sometimes one gene will have multiple entries. We store
-    # each gene entry in a file based on its database ID.
-    parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
+    cachedir = args.genecache
+    organism = args.organism
 
-    for event, elem in parser:
+    try:
+        with open(args.cachesnapshot) as xml_file:
 
-        # find the official name of the gene
-        gene_name_element = elem.find('.//Gene-ref_locus')
-        if gene_name_element is not None:
-            gene_name = gene_name_element.text
-            # find the database id of the gene
-            gene_id = elem.find('.//Gene-track_geneid').text
-            gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
-            if not os.path.exists(gene_cache_dir):
-                os.makedirs(gene_cache_dir)
-            # Write a single 'Entrezgene' entry to a file in the cache using the
-            # database ID for the file name
-            gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
-            with open(gene_cache_filename, 'w') as cache_file:
-                cache_file.write(etree.tostring(elem))
+            # read each "Entrezgene" record in the input XML and write it out to
+            # a cache file. Sometimes one gene will have multiple entries. We store
+            # each gene entry in a file based on its database ID.
+            parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
 
-        # free up memory used by the XML iterative parser
-        elem.clear()
-        while elem.getprevious() is not None:
-           del elem.getparent()[0]
+            for event, elem in parser:
+
+                # find the official name of the gene
+                gene_name_element = elem.find('.//Gene-ref_locus')
+                if gene_name_element is not None:
+                    gene_name = gene_name_element.text
+                    # find the database id of the gene
+                    gene_id = elem.find('.//Gene-track_geneid').text
+                    gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
+                    if not os.path.exists(gene_cache_dir):
+                        os.makedirs(gene_cache_dir)
+                    # Write a single 'Entrezgene' entry to a file in the cache using the
+                    # database ID for the file name
+                    gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
+                    with open(gene_cache_filename, 'w') as cache_file:
+                        cache_file.write(etree.tostring(elem))
+
+                # free up memory used by the XML iterative parser
+                elem.clear()
+                while elem.getprevious() is not None:
+                   del elem.getparent()[0]
+
+    except EnvironmentError as e:
+        exit("{}: failed to open gene cache XML file: {}".format(program_name, e))
