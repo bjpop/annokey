@@ -4,6 +4,7 @@ import os
 import hashlib
 import logging
 from process_xml import get_geneContent
+from hash import stable_string_hash
 
 def lookup_gene_cache_iter(args, gene_name):
     '''Gene records are stored in a file which is named using the
@@ -22,15 +23,10 @@ def lookup_gene_cache_iter(args, gene_name):
         filepath = os.path.join(gene_cache_dir, geneDatabaseID)
         yield geneDatabaseID, filepath 
 
-def stable_string_hash(str):
-    '''A hash function for strings based on MD5 hashing which should be stable
-    across Python implementations, unlike the built-in hash function. It doesn't
-    matter if this is slow because we don't call it often.'''
-    return int(hashlib.md5(str).hexdigest(), 16)
 
-def make_pubmed_cache_dirname(cachedir, pubmed_id):
-    hash_dir = stable_string_hash(pubmed_id) % 256
-    return os.path.join(cachedir, str(hash_dir))
+#def make_pubmed_cache_dirname(cachedir, pubmed_id):
+#    hash_dir = stable_string_hash(pubmed_id) % 256
+#    return os.path.join(cachedir, str(hash_dir))
 
 def make_gene_cache_dirname(cachedir, organism, gene_name):
     # we normalise the gene name to upper case.
@@ -41,32 +37,12 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
 
 def save_gene_cache(cachedir, organism, xml_file):
 
-    count = 0
-    pubmed_ids = set()
-
     # read each "Entrezgene" record in the input XML and write it out to
     # a cache file. Sometimes one gene will have multiple entries. We store
     # each gene entry in a file based on its database ID.
     parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
 
     for event, elem in parser:
-
-        #if count > 100:
-        #    break
-        #else:
-        #    count += 1
-
-        # get the pubmed ids
-        #commentary = elem.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
-        #if commentary is not None:
-        #    for pub in elem.iterchildren():
-        #        pubMedId = pub.find('.//Pub_pmid/PubMedId')
-        #        if pubMedId is not None and pubMedId.text is not None:
-        #            pubmed_ids.add(pubMedId.text)
-
-        geneId, content = get_geneContent(elem)
-        pubmed_ids.update(content["PmIds"]) 
-
 
         # find the official name of the gene
         gene_name_element = elem.find('.//Gene-ref_locus')
@@ -87,5 +63,3 @@ def save_gene_cache(cachedir, organism, xml_file):
         elem.clear()
         while elem.getprevious() is not None:
            del elem.getparent()[0]
-
-    return pubmed_ids

@@ -26,14 +26,6 @@ The search results are appended at the end of column of the
 input gene file with the information about the search term hit,
 the search term rank, and the section where the search term hit.
 
-Required inputs:
-
-    --terms FILENAME   a text file of search terms. One term per line.
-
-    --genes FILENAME   a text file of gene information, one gene per line.
-                       Format is tab separated. Must contain at least one
-                       column of gene names.
-
 --------------------------------------------------------------------------------
 '''
 
@@ -46,11 +38,10 @@ from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
 import itertools
-import cPickle as pickle
 import logging
 from process_xml import GeneParser, GeneHit
 from version import annokey_version
-from genecache import (lookup_gene_cache_iter, stable_string_hash,
+from genecache import (lookup_gene_cache_iter,
     make_gene_cache_dirname, save_gene_cache)
 from pubmedcache import make_pubmed_cache_dirname
 from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
@@ -95,124 +86,21 @@ DEFAULT_GENE_DELIMITER = ','
 #encouraged to do so.
 
 
-def fetch_and_save_pubmed_records(cachedir, ids):
-    # XXX Fetch all records here regardless of existing pubmed cache.
-    # We may be able to skip the records that already exist if
-    # the records are not updated.
-    # XXX As the number of pubmed ids is usually large,
-    # save XML file in cache right after fetching them.
-    if len(ids) > 0:
-        idString = ','.join(ids)
-        postRequest = Entrez.epost(db='pubmed', id=idString)
-        postResult = Entrez.read(postRequest)
-        webEnv = postResult['WebEnv']
-        queryKey = postResult['QueryKey']
-        retstart = 0
-        chunk_size = 10000
-
-        while retstart < len(ids):
-            try:
-                fetch_request = Entrez.efetch(db='pubmed',
-                                              webenv=webEnv,
-                                              query_key=queryKey,
-                                              retmode='xml',
-                                              retmax=chunk_size,
-                                              retstart=retstart)
-                pubmed_result = fetch_request.read()
-            # XXX What should we do on exception? Try again? Sleep? Quit?
-            except Exception as e:
-                print("fetch failed with: {} {}".format(e, type(e)))
-                break
-
-            save_pubmed_cache(cachedir, pubmed_result)
-            retstart += chunk_size
-
-
-def lookup_pubmed_ids(ids):
-    not_cached_ids = []
-    # search for all the cached pubmed ids first, and
-    # collect the non-cached ones.
-    for id in ids:
-        cache_result = lookup_pubmed_cache(id)
-        if cache_result is not None:
-            yield cache_result
-        else:
-            not_cached_ids.append(id)
-
-    # I don't think we should do the chunking here, but instead
-    # rely on the Entrz history.
-    # fetch the non-cached ids from NCBI
-
-    if len(not_cached_ids) == 0:
-        return
-
-    idString = ','.join(not_cached_ids)
-    postRequest = Entrez.epost(db='pubmed', id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    retstart = 0
-    chunk_size = 10000
-
-    while retstart < len(not_cached_ids):
-        try:
-            fetch_request = Entrez.efetch(db='pubmed',
-                                          webenv=webEnv,
-                                          query_key=queryKey,
-                                          retmode='xml',
-                                          retmax=chunk_size,
-                                          retstart=retstart)
-            pubmed_result = fetch_request.read()
-        # XXX What should we do on exception? Try again? Sleep? Quit?
-        except Exception as e:
-            print("fetch failed with: {} {}".format(e, type(e)))
-            break 
-
-        content = etree.iterparse(StringIO(pubmed_result), events=('end',), tag='PubmedArticle')
-        for event, pubmed_entry in content:
-            # XXX we should cache this result possibly
-            yield get_pubmed_content(pubmed_entry)
-            # Clear node references
-            pubmed_entry.clear()
-            while pubmed_entry.getprevious() is not None:
-                del pubmed_entry.getparent()[0]
-        del content
-        retstart += chunk_size
-
-
-# assume input is a set
-"""
-def fetch_records_from_ids(ids):
-
-    db = 'gene'
-    idString = ','.join(list(ids))
-    postRequest = Entrez.epost(db=db, id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    fetchRequest = Entrez.efetch(db=db,
-                                 webenv=webEnv,
-                                 query_key=queryKey,
-                                 retmode='xml')
-    return fetchRequest.read()
-"""
-
-
-def merge_geneContent(geneContent, values):
-    '''Merge gene information.
-
-    Args:
-         geneContent: dict containing gene information.
-                      values to be merged into this geneContent.
-         values: a list of tuple containing gene information.
-                 It is to be merged into geneContent.
-    Returns:
-         A dict containing gene information.
-    '''
-
-    for key, value in values:
-        geneContent[key] += value 
-    return geneContent
+#def merge_geneContent(geneContent, values):
+#    '''Merge gene information.
+#
+#    Args:
+#         geneContent: dict containing gene information.
+#                      values to be merged into this geneContent.
+#         values: a list of tuple containing gene information.
+#                 It is to be merged into geneContent.
+#    Returns:
+#         A dict containing gene information.
+#    '''
+#
+#    for key, value in values:
+#        geneContent[key] += value 
+#    return geneContent
 
 def aggregate_hits(hits):
     '''Aggregate information about all the hits for a search term
@@ -230,17 +118,17 @@ def aggregate_hits(hits):
     for h in hits:
         term = str(h.search_term)
         field = h.field
-        contexts = h.contexts
+        match = h.match
         rank = h.rank
         if (rank, term) in term_dict:
             term_fields = term_dict[(rank, term)]
             if field in term_fields:
-                term_field_contexts = term_fields[field]
-                term_field_contexts.extend(contexts)
+                term_field_matches = term_fields[field]
+                term_field_matches.append(match)
             else:
-                term_fields[field] = contexts
+                term_fields[field] = [match]
         else:
-            term_fields = {field: contexts}
+            term_fields = {field: [match]}
             term_dict[(rank, term)] = term_fields
     return term_dict
 
@@ -359,52 +247,6 @@ def fetch_records_from_ids(ids):
     return fetchRequest.read()
 
 
-#def make_pubmed_cache_dirname(cachedir, pubmed_id):
-#    hash_dir = stable_string_hash(pubmed_id) % 256
-#    return os.path.join(cachedir, str(hash_dir))
-
-
-def save_pubmed_cache(cachedir, pubmed_records_xml):
-    # Read each "PubMedArticle" record in the input XML and 
-    # write it out to a cache file. We store each article entry in a file
-    # based on its PubMed ID.
-    
-    parser = etree.iterparse(StringIO(pubmed_records_xml), events=('end',), tag='PubmedArticle')
-    for event, pubmed_entry in parser:
-        # Find pubmed id
-        pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
-        pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, pubmed_id)
-        if not os.path.exists(pubmed_cache_dir):
-            os.makedirs(pubmed_cache_dir)
-        pubmed_cache_filename = os.path.join(pubmed_cache_dir, pubmed_id)
-        with open(pubmed_cache_filename, 'w') as cache_file:
-            cache_file.write(etree.tostring(pubmed_entry))
-        # free up memory used by the XML iterative parser
-        pubmed_entry.clear()
-        while pubmed_entry.getprevious() is not None:
-            del pubmed_entry.getparent()[0]
-
-
-'''
-def fetch_records(args):
-    # fetch gene records and pubmed records and save them in cache.
-
-    # read each gene name from the gene file 
-    gene_ids = get_gene_ids(args, args.genes, args.organism)
-    # fetch the corresponding XML records for the identified genes
-    gene_records_xml = fetch_records_from_ids(gene_ids)
-    # Cache the gene entries in the XML file
-    save_gene_cache(args.genecache, args.organism, StringIO(gene_records_xml))
-
-    # pubmed records
-    # get pubmed ids from each gene records
-    #pubmed_ids = get_pubmed_ids(args)
-    # fetch the corresponding XML records for pubmed ids
-    # cache the pubmed records
-    fetch_and_save_pubmed_records(args.pubmedcache, pubmed_ids)
-'''
-
-
 def parse_args():
     parser = ArgumentParser(description='Search NCBI for genes of interest, '
                                         'based on concept-keyword search.')
@@ -476,6 +318,10 @@ def parse_args():
                         help='Return all the matches of a search term in a database field, not just the first one',
                         action='store_true')
 
+    parser.add_argument('--pubmed',
+                       help='Search titles and abstracts in Pubmed entries referred to in each gene entry',
+                       action='store_true')
+
     return parser
 
 
@@ -492,6 +338,7 @@ def get_gene_delimiter(args):
         logging.info("Using '{}' for delimiter in genes input file"
                      .format(DEFAULT_GENE_DELIMITER))
         return DEFAULT_GENE_DELIMITER
+
 
 def main():
     args_parser = parse_args()
@@ -516,31 +363,22 @@ def main():
         exit()
 
     if args.cachesnapshot:
-        if args.email:
-            Entrez.email = args.email
-        else:
-            exit('{}: an email address is required for accessing pubmed, use the --email flag'.format(program_name))
         # Get gene information from specified XML file.
         # Populate the genecache from the contents of the file. 
         with open(args.cachesnapshot) as xml_file:
-            pubmed_ids = save_gene_cache(args.genecache, args.organism, xml_file)
-            #print("Getting {} pubmed articles".format(len(pubmed_ids)))
-            for x in pubmed_ids:
-               print(x)
-            fetch_and_save_pubmed_records(args.pubmedcache, pubmed_ids)
+            save_gene_cache(args.genecache, args.organism, xml_file)
 
     # only perform search if terms and genes are specified
     if args.genes and args.terms:
-        if args.online:
+        if args.online or args.pubmed:
             #  Get gene information online.
             if args.email:
                 Entrez.email = args.email
             else:
-                exit('{}: an email address is required for online queries, use the --email flag'.format(program_name))
+                exit('{}: an email address is required for online/pubmed queries, use the --email flag'.format(program_name))
 
         args.delimiter = get_gene_delimiter(args)
         report_page = init_report_page(hostname, working_directory, command_line_text)
-        # Get gene information from cache.
         search_terms(args, report_page)
         write_report(args.report, report_page)
 

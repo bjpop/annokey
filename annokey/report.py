@@ -149,11 +149,16 @@ def report_hits(gene_name, gene_db_id, hits, report_page):
             for field in fields:
                 div.h4(field)
                 with div.ol as list:
-                    for (before, match, after) in fields[field]:
+                    for match in fields[field]:
                         with list.li as list_item:
-                            list_item.text(to_string(before))
-                            list_item.b(to_string(match))
-                            list_item.text(to_string(after))
+                            start = 0
+                            context = to_string(match.context)
+                            for (span_low, span_high) in match.spans:
+                                before_span = context[start:span_low]
+                                list_item.text(before_span)
+                                list_item.b.u(context[span_low:span_high])
+                                start = span_high
+                            list_item.text(context[start:])
         div.hr
 
 def to_string(text):

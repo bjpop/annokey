@@ -1,36 +1,17 @@
-'''
---------------------------------------------------------------------------------
-
-Annokey: a NCBI Gene Database Keyword Search Tool
--------------------------------------------------
-
-Authors:   Daniel Park, Sori Kang, Bernie Pope, Tu Nguyen-Dumont.
-Copyright: 2013
-Website:   https://github.com/bjpop/annokey
-License:   BSD, see LICENCE file in source distribution. 
-
-
---------------------------------------------------------------------------------
-'''
-
 import os
 from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
 import itertools
 import logging
-from pubmedcache import make_pubmed_cache_dirname
+from pubmedcache import (make_pubmed_cache_dirname, save_pubmed_cache)
 
 class GeneHit(object):
-    def __init__(self, search_term, rank, field, contexts):
+    def __init__(self, search_term, rank, field, match):
         self.search_term = search_term # string
         self.rank = rank # int
         self.field = field # string, name of location where hit occurred
-        self.contexts = contexts # [string], context of matching hits
-
-    def __str__(self):
-        return '(term: {}, rank: {}, field: {}, contexts: {})'.format(
-           self.search_term, self.rank, self.field, str(self.contexts))
+        self.match = match # TermMatch
 
 class GeneParser(object):
     
@@ -43,8 +24,9 @@ class GeneParser(object):
             geneId, content = get_geneContent(geneEntry)
             for hit in search_terms_in_dict(args, content, search_terms, geneId):
                 yield hit
-            for hit in search_terms_in_pubmed(args, content["PmIds"], search_terms, geneId):
-                yield hit
+            if args.pubmed:
+                for hit in search_terms_in_pubmed(args, content["PmIds"], search_terms, geneId):
+                    yield hit
 
     @staticmethod
     def pubmed_ids(xmlfile):
@@ -76,9 +58,9 @@ class PubMedParser(object):
             except KeyError:
                 pass
             for rank, search_term in enumerate(search_terms, 1):
-                matches = search_term.search(args, title_abst)
-                if len(matches) > 0:
-                    yield GeneHit(search_term, rank, 'PubMed', matches)
+                match = search_term.search(args, title_abst)
+                if match is not None:
+                    yield GeneHit(search_term, rank, 'PubMed', match)
 
 def search_terms_in_pubmed(args, ids, search_terms, gene_id):
     for pubmed_record in get_pubmed_records(args, ids):
@@ -91,45 +73,49 @@ def search_terms_in_pubmed(args, ids, search_terms, gene_id):
 seen_pubmed_records = {}
 
 def get_pubmed_records(args, ids):
-    new_ids = set()
+    not_seen_ids = set()
 
     # Check for records that we've previously already retrieved.
     for id in ids:
         if id in seen_pubmed_records:
             yield seen_pubmed_records[id]
         else:
-            new_ids.add(id)
+            not_seen_ids.add(id)
 
-    if args.online:
-        # Each record from online search could contain many pubmed records.
-        # So we split them up and save them individually in the 
-        # seen_pubmed_records dictionary.
-        for record in fetch_pubmed_records_online(new_ids):
-            parser = etree.iterparse(StringIO(record), events=('end',), tag='PubmedArticle')
-            for event, pubmed_entry in parser:
-                # Find pubmed id
-                pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
-                record = etree.tostring(pubmed_entry)
-                seen_pubmed_records[pubmed_id] = record
-                # free up memory used by the XML iterative parser
-                pubmed_entry.clear()
-                while pubmed_entry.getprevious() is not None:
-                    del pubmed_entry.getparent()[0]
-                yield record
-    else:
-        # look for the records in the file cache
-        for id in new_ids:
-            pubmed_filename = lookup_pubmed_cache(args.pubmedcache, id)
-            if pubmed_filename is not None:
-                try:
-                    with open(pubmed_filename) as pubmed_file:
-                        pubmed_xml = pubmed_file.read()
-                        seen_pubmed_records[id] = pubmed_xml
-                        yield pubmed_xml
-                except EnvironmentError as e:
-                    logging.warn("Could not open or read pubmed file: {}".format(pubmed_filename))
-            else:
-                logging.info("Could not find pubmed article {} in cache".format(id))
+    not_filecached_ids = set()
+
+    # look for the records in the file cache
+    for id in not_seen_ids:
+        pubmed_filename = lookup_pubmed_cache(args.pubmedcache, id)
+        if pubmed_filename is not None:
+            try:
+                with open(pubmed_filename) as pubmed_file:
+                    pubmed_xml = pubmed_file.read()
+                    seen_pubmed_records[id] = pubmed_xml
+                    yield pubmed_xml
+            except EnvironmentError as e:
+                logging.warn("Could not open or read pubmed file: {}".format(pubmed_filename))
+        else:
+            logging.info("Could not find pubmed article {} in cache".format(id))
+            not_filecached_ids.add(id)
+
+    # Each record from online search could contain many pubmed records.
+    # So we split them up and save them individually in the 
+    # seen_pubmed_records dictionary.
+    for record in fetch_pubmed_records_online(not_filecached_ids):
+        parser = etree.iterparse(StringIO(record), events=('end',), tag='PubmedArticle')
+        for event, pubmed_entry in parser:
+            # Find pubmed id
+            pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
+            logging.info("Found pubmed article {} online".format(pubmed_id))
+            record = etree.tostring(pubmed_entry)
+            seen_pubmed_records[pubmed_id] = record
+            save_pubmed_cache(args.pubmedcache, pubmed_id, record)
+            # free up memory used by the XML iterative parser
+            pubmed_entry.clear()
+            while pubmed_entry.getprevious() is not None:
+                del pubmed_entry.getparent()[0]
+            yield record
 
 
 def fetch_pubmed_records_online(ids):
@@ -159,71 +145,11 @@ def fetch_pubmed_records_online(ids):
             retstart += chunk_size
 
 
-
 def lookup_pubmed_cache(cachedir, id):
-    print("looking for {}".format(id))
     pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, id)
     pubmed_cache_filename = os.path.join(pubmed_cache_dir, id)
     if os.path.isfile(pubmed_cache_filename):
         return pubmed_cache_filename
-    else:
-        print("could not find {}".format(pubmed_cache_filename))
-
-
-'''
-def lookup_pubmed_ids(ids):
-    not_cached_ids = []
-    # search for all the cached pubmed ids first, and
-    # collect the non-cached ones.
-    for id in ids:
-        cache_result = lookup_pubmed_cache(id)
-        if cache_result is not None:
-            #print("found {} in cache:".format(id))
-            yield cache_result
-        else:
-            #print("did not find {} in cache:".format(id))
-            not_cached_ids.append(id)
-
-    # I don't think we should do the chunking here, but instead
-    # rely on the Entrz history.
-    # fetch the non-cached ids from NCBI
-
-    if len(not_cached_ids) == 0:
-        return
-
-    idString = ','.join(not_cached_ids)
-    postRequest = Entrez.epost(db='pubmed', id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    retstart = 0
-    chunk_size = 10000
-
-    while retstart < len(not_cached_ids):
-        try:
-            fetch_request = Entrez.efetch(db='pubmed',
-                                          webenv=webEnv,
-                                          query_key=queryKey,
-                                          retmode='xml',
-                                          retmax=chunk_size,
-                                          retstart=retstart)
-            pubmed_result = fetch_request.read()
-        # XXX What should we do on exception? Try again? Sleep? Quit?
-        except Exception as e:
-            print("fetch failed with: {} {}".format(e, type(e)))
-            break 
-
-        content = etree.iterparse(StringIO(pubmed_result), events=('end',), tag='PubmedArticle')
-        for event, pubmed_entry in content:
-            # XXX we should cache this result possibly
-            yield get_pubmed_content(pubmed_entry)
-            # Clear node references
-            pubmed_entry.clear()
-            while pubmed_entry.getprevious() is not None:
-                del pubmed_entry.getparent()[0]
-        del content
-        retstart += chunk_size
-'''
 
 
 # What to be saved is
@@ -498,6 +424,6 @@ def search_terms_in_dict(args, dbEntry, search_terms, geneID):
     for rank, search_term in enumerate(search_terms, 1):
         for field, content in dbEntry.iteritems():
             for item in content:
-                matches = search_term.search(args, item)
-                if len(matches) > 0:
-                    yield GeneHit(search_term, rank, field, matches)
+                match = search_term.search(args, item)
+                if match is not None:
+                    yield GeneHit(search_term, rank, field, match)
