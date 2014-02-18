@@ -6,6 +6,7 @@ import logging
 from process_xml import get_geneContent
 from hash import stable_string_hash
 from name import program_name
+import sqlite3
 
 def lookup_gene_cache_iter(args, gene_name):
     '''Gene records are stored in a file which is named using the
@@ -34,8 +35,14 @@ def make_gene_cache_dirname(cachedir, organism, gene_name):
 
 def save_gene_cache(args):
 
-    cachedir = args.genecache
+    #cachedir = args.genecache
     organism = args.organism
+
+    conn = sqlite3.connect(args.genecache)
+    cursor = conn.cursor()
+    cursor.execute('''DROP TABLE IF EXISTS genes''')
+    cursor.execute('''CREATE TABLE genes
+                       (gene_id INTEGER PRIMARY KEY, name TEXT)''')
 
     try:
         with open(args.cachesnapshot) as xml_file:
@@ -46,21 +53,41 @@ def save_gene_cache(args):
             parser = etree.iterparse(xml_file, events=('end',), tag='Entrezgene')
 
             for event, elem in parser:
+                gene_id, content = get_geneContent(elem)
+
+                gene_name = ''
+                gene_name_list = content['Gene Name']
+                if len(gene_name_list) > 0:
+                    gene_name = gene_name_list[0]
+                if gene_name:
+                    print('inserting {}'.format(gene_name))
+                else:
+                    print('########## NO NAME ##########')
+
+                cursor.execute("INSERT INTO genes VALUES (?,?)",
+                              (gene_id, gene_name))
+
+                #gene_name_element = elem.find('.//Gene-ref_locus')
+
+                #if gene_name_element is not None:
+                #    gene_id, content = get_geneContent(elem)
+                #    cursor.execute("INSERT INTO genes VALUES ({}, '{}')".format(gene_id, gene_name_element.text))
+                #    print(gene_name_element.text)
+                    #conn.commit()
 
                 # find the official name of the gene
-                gene_name_element = elem.find('.//Gene-ref_locus')
-                if gene_name_element is not None:
-                    gene_name = gene_name_element.text
-                    # find the database id of the gene
-                    gene_id = elem.find('.//Gene-track_geneid').text
-                    gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
-                    if not os.path.exists(gene_cache_dir):
-                        os.makedirs(gene_cache_dir)
-                    # Write a single 'Entrezgene' entry to a file in the cache using the
-                    # database ID for the file name
-                    gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
-                    with open(gene_cache_filename, 'w') as cache_file:
-                        cache_file.write(etree.tostring(elem))
+                #if gene_name_element is not None:
+                #    gene_name = gene_name_element.text
+                #    # find the database id of the gene
+                #    gene_id = elem.find('.//Gene-track_geneid').text
+                #    gene_cache_dir = make_gene_cache_dirname(cachedir, organism, gene_name)
+                #    if not os.path.exists(gene_cache_dir):
+                #        os.makedirs(gene_cache_dir)
+                #    # Write a single 'Entrezgene' entry to a file in the cache using the
+                #    # database ID for the file name
+                #    gene_cache_filename = os.path.join(gene_cache_dir, gene_id)
+                #    with open(gene_cache_filename, 'w') as cache_file:
+                #        cache_file.write(etree.tostring(elem))
 
                 # free up memory used by the XML iterative parser
                 elem.clear()
@@ -69,3 +96,6 @@ def save_gene_cache(args):
 
     except EnvironmentError as e:
         exit("{}: failed to open gene cache XML file: {}".format(program_name, e))
+    finally:
+        conn.commit()
+        conn.close()
