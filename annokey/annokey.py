@@ -86,22 +86,6 @@ DEFAULT_GENE_DELIMITER = ','
 #encouraged to do so.
 
 
-#def merge_geneContent(geneContent, values):
-#    '''Merge gene information.
-#
-#    Args:
-#         geneContent: dict containing gene information.
-#                      values to be merged into this geneContent.
-#         values: a list of tuple containing gene information.
-#                 It is to be merged into geneContent.
-#    Returns:
-#         A dict containing gene information.
-#    '''
-#
-#    for key, value in values:
-#        geneContent[key] += value 
-#    return geneContent
-
 def aggregate_hits(hits):
     '''Aggregate information about all the hits for a search term
     and a given gene.
@@ -133,34 +117,22 @@ def aggregate_hits(hits):
     return term_dict
 
 
-def summarise_hits(hits):
-    '''Given a list of hits from a search, generate a list with
-    the following three things:
+def summarise_hits(all_hits):
 
-      1. highest ranked hit
-      2. all the terms that were in hits
-      3. all the fields where the terms were found
-    '''
+    all_ranks = []
+    num_matches = 0
 
-    ranks = []
-    terms = set()
-    fields = set()
-
-    for h in hits:
-        ranks.append(h.rank)
-        terms.add(h.search_term.term)
-        for f in h.fields:
-            fields.add(f)
-
-    if len(ranks) > 0:
-        highest_rank = str(sorted(ranks)[0])
+    for (rank, term), fields in all_hits.items():
+        all_ranks.append(rank)
+        for field, matches in fields.items():
+            for match in matches:
+                num_matches += len(match.spans)
+      
+    if len(all_ranks) > 0:
+        highest_rank = str(sorted(all_ranks)[0])
+        return [highest_rank, str(num_matches)]
     else:
-        highest_rank = ''
-
-    all_terms = ';'.join([t.strip() for t in terms])
-    all_fields = ';'.join([f.strip() for f in fields])
-
-    return [highest_rank, all_terms, all_fields]
+        return ['', '']
 
 
 def search_terms(args, report_page):
@@ -181,7 +153,7 @@ def search_terms(args, report_page):
             reader = csv.DictReader(genesfile, delimiter=args.delimiter)
             writer = csv.writer(sys.stdout, delimiter=args.delimiter)
             # preserve the header from the original gene file
-            annokey_headers = ['Highest Ranked Match', 'Matched Terms', 'Fields']
+            annokey_headers = ['Highest Ranked Match', 'Num Matched Entries']
             new_header = reader.fieldnames + annokey_headers 
             writer.writerow(new_header)
             # for each row in the genes file, find hits for the gene
@@ -195,15 +167,11 @@ def search_terms(args, report_page):
                     for gene_db_id, gene_xml in get_gene_records(args, gene_name):
                         hits = list(GeneParser.term_hit(args, gene_xml, terms))
                         all_hits = aggregate_hits(hits)
+                        summary  = summarise_hits(all_hits)
+                        output_row = [input_row[field] for field in reader.fieldnames]
+                        writer.writerow(output_row + summary)
                         report_hits(gene_name, gene_db_id, all_hits, report_page)
-                    #for gene_db_id, gene_file_path in lookup_gene_cache_iter(args, gene_name):
-                    #    with open(gene_file_path) as gene_xml:
-                    #        hits = list(GeneParser.term_hit(gene_xml, terms, args.pubmedcache))
-                    #        all_hits = aggregate_hits(hits)
-                    #        report_hits(gene_name, gene_db_id, all_hits, report_page)
-                    #hits_output = summarise_hits(hits) 
-                    #output_row = [input_row[field] for field in reader.fieldnames]
-                    #writer.writerow(output_row + hits_output)
+
 
 def get_gene_records(args, gene_name):
     if args.online:
