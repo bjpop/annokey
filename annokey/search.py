@@ -46,17 +46,17 @@ def summarise_hits(all_hits):
     all_ranks = []
     num_matches = 0
 
-    for (rank, term), fields in all_hits.items():
-        all_ranks.append(rank)
+    for rank_term, fields in all_hits.items():
+        all_ranks.append(rank_term)
         for field, matches in fields.items():
             for match in matches:
                 num_matches += len(match.spans)
       
     if len(all_ranks) > 0:
-        highest_rank = str(sorted(all_ranks)[0])
-        return [highest_rank, str(num_matches)]
+        highest_rank, highest_rank_term = sorted(all_ranks)[0]
+        return [str(highest_rank), highest_rank_term, str(num_matches)]
     else:
-        return ['', '']
+        return ['', '', '']
 
 
 def search_terms(args, report_page):
@@ -77,7 +77,7 @@ def search_terms(args, report_page):
             reader = csv.DictReader(genesfile, delimiter=args.delimiter)
             writer = csv.writer(sys.stdout, delimiter=args.delimiter)
             # preserve the header from the original gene file
-            annokey_headers = ['Highest Ranked Match', 'Num Matched Entries']
+            annokey_headers = ['Highest Rank', 'Highest Rank Term', 'Total Matched Entries']
             new_header = reader.fieldnames + annokey_headers 
             writer.writerow(new_header)
             # for each row in the genes file, find hits for the gene
