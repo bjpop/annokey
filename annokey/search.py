@@ -6,8 +6,8 @@ from process_xml import GeneParser
 from genecache import (lookup_gene_cache_iter,
     make_gene_cache_dirname, save_gene_cache)
 from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
-from search_term import (parse_search_term)
 from name import program_name
+import re
 
 
 def aggregate_hits(hits):
@@ -137,3 +137,42 @@ def fetch_records_from_ids(ids):
                                  query_key=queryKey,
                                  retmode='xml')
     return fetchRequest.read()
+
+
+
+# how many characters either side of the match do
+# we keep as context
+context_width = 50
+
+class SearchTerm(object):
+    pass
+
+class Regex(SearchTerm):
+    def __init__(self, term):
+        self.term = term
+        self.match = re.compile(term)
+
+    def search(self, args, string):
+        """find the pattern in the string and
+        return the context around the match"""
+        spans = []
+        for match in self.match.finditer(string):
+            spans.append(match.span())
+        if len(spans) > 0:
+            return TermMatch(string, spans)
+        else:
+            return None
+
+    def __str__(self):
+        return self.term
+
+
+class TermMatch(object):
+    def __init__(self, context, spans):
+        self.context = context # string that was searched in
+        self.spans = spans
+
+
+def parse_search_term(string):
+    search_term = string.strip()
+    return Regex(search_term)
