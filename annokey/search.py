@@ -1,14 +1,19 @@
+'''
+Search code for Annokey.
+
+Find matches of key terms within selected fields of
+the NCBI gene database and Pubmed articles.
+'''
+
 import sys
 import csv
 from Bio import Entrez
 import logging
-from process_xml import GeneParser 
-from genecache import (lookup_gene_cache_iter,
-    make_gene_cache_dirname, save_gene_cache)
-from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits, write_report)
-from name import program_name
+from .process_xml import GeneParser
+from .genecache import lookup_gene_cache_iter
+from .report import report_hits
+from .name import PROGRAM_NAME
 import re
-
 
 def aggregate_hits(hits):
     '''Aggregate information about all the hits for a search term
@@ -23,11 +28,11 @@ def aggregate_hits(hits):
     the matched term.
     '''
     term_dict = {}
-    for h in hits:
-        term = str(h.search_term)
-        field = h.field
-        match = h.match
-        rank = h.rank
+    for hit in hits:
+        term = str(hit.search_term)
+        field = hit.field
+        match = hit.match
+        rank = hit.rank
         if (rank, term) in term_dict:
             term_fields = term_dict[(rank, term)]
             if field in term_fields:
@@ -42,16 +47,26 @@ def aggregate_hits(hits):
 
 
 def summarise_hits(all_hits):
+    '''From the aggregated hits, compute a summary for the purposes of
+    annotating the CSV file.
+
+    The annotation contains:
+
+       1) The rank of the highest ranking matched search term.
+       2) The highest ranking matched search term (the term itself).
+       3) The total number of times the term was matched in all
+          the fields.
+    '''
 
     all_ranks = []
     num_matches = 0
 
     for rank_term, fields in all_hits.items():
         all_ranks.append(rank_term)
-        for field, matches in fields.items():
+        for _, matches in fields.items():
             for match in matches:
                 num_matches += len(match.spans)
-      
+
     if len(all_ranks) > 0:
         highest_rank, highest_rank_term = sorted(all_ranks)[0]
         return [str(highest_rank), highest_rank_term, str(num_matches)]
@@ -60,6 +75,12 @@ def summarise_hits(all_hits):
 
 
 def search_terms(args, report_page):
+    '''For each gene in the input, search for occurrences
+    of each of the search terms.
+
+    Produce a HTML report of all the hits, and annotate
+    and output CSV file with a summary of the hits.
+    '''
 
     # build a list of all the search terms in the order that they
     # appear in the search terms file (rank order)
@@ -69,90 +90,102 @@ def search_terms(args, report_page):
         with open(args.terms) as termsfile:
             for line in termsfile:
                 terms.append(parse_search_term(line))
-    except EnvironmentError as e:
-        exit("{}: failed to open terms file: {}".format(program_name, e))
+    except EnvironmentError as exception:
+        exit("{}: failed to open terms file: {}".
+            format(PROGRAM_NAME, exception))
 
     if len(terms) > 0:
-        with open(args.genes) as genesfile:
-            reader = csv.DictReader(genesfile, delimiter=args.delimiter)
-            writer = csv.writer(sys.stdout, delimiter=args.delimiter)
-            # preserve the header from the original gene file
-            annokey_headers = ['Highest Rank', 'Highest Rank Term', 'Total Matched Entries']
-            new_header = reader.fieldnames + annokey_headers 
-            writer.writerow(new_header)
-            # for each row in the genes file, find hits for the gene
-            # print the row out with the hits annoated on the end
-            for input_row in reader:
-                try:
-                    gene_name = input_row['Gene'].strip()
-                except KeyError:
-                    exit("{}: can't find Gene column in input gene file".format(program_name))
-                else:
-                    for gene_db_id, gene_xml in get_gene_records(args, gene_name):
-                        hits = list(GeneParser.term_hit(args, gene_xml, terms))
-                        all_hits = aggregate_hits(hits)
-                        summary  = summarise_hits(all_hits)
-                        output_row = [input_row[field] for field in reader.fieldnames]
-                        writer.writerow(output_row + summary)
-                        report_hits(gene_name, gene_db_id, all_hits, report_page)
+        search_terms_worker(args, terms, report_page)
+
+def search_terms_worker(args, terms, report_page):
+    '''Worker function for search_terms.'''
+
+    with open(args.genes) as genesfile:
+        reader = csv.DictReader(genesfile, delimiter=args.delimiter)
+        writer = csv.writer(sys.stdout, delimiter=args.delimiter)
+        # preserve the header from the original gene file
+        annokey_headers = ['Highest Rank', 'Highest Rank Term',
+            'Total Matched Entries']
+        new_header = reader.fieldnames + annokey_headers
+        writer.writerow(new_header)
+        # for each row in the genes file, find hits for the gene
+        # print the row out with the hits annoated on the end
+        for input_row in reader:
+            try:
+                gene_name = input_row['Gene'].strip()
+            except KeyError:
+                exit("{}: can't find Gene column in input gene file".
+                    format(PROGRAM_NAME))
+            else:
+                for gene_count, (gene_db_id, gene_xml) in \
+                        enumerate(get_gene_records(args, gene_name)):
+                    hits = list(GeneParser.term_hit(args, gene_xml, terms))
+                    all_hits = aggregate_hits(hits)
+                    summary = summarise_hits(all_hits)
+                    output_row = [input_row[field] for field in
+                                 reader.fieldnames]
+                    writer.writerow(output_row + summary)
+                    report_hits(gene_count, gene_name, gene_db_id, all_hits,
+                        report_page)
 
 
 def get_gene_records(args, gene_name):
+    '''Retrieve the gene XML records for a given gene from the
+    gene cache, or from online.
+    '''
     if args.online:
         gene_ids = get_gene_ids(args, gene_name)
         for gene_id in gene_ids:
             gene_records_xml = fetch_records_from_ids(gene_ids)
             yield gene_id, gene_records_xml
     else:
-       for gene_db_id, gene_file_path in lookup_gene_cache_iter(args, gene_name):
-           try:
-               with open(gene_file_path) as gene_xml_file:
-                   gene_xml_contents = gene_xml_file.read()
-           except EnvironmentError as e:
-               exit("{}: failed to open gene XML file: {}".format(gene_file_path, e))
-           yield gene_db_id, gene_xml_contents
+        for gene_db_id, gene_file_path in \
+            lookup_gene_cache_iter(args, gene_name):
+            try:
+                with open(gene_file_path) as gene_xml_file:
+                    gene_xml_contents = gene_xml_file.read()
+            except EnvironmentError as exception:
+                exit("{}: failed to open gene XML file: {}".
+                    format(gene_file_path, exception))
+            yield gene_db_id, gene_xml_contents
+
 
 def get_gene_ids(args, gene_name):
-    genefilename = args.genes
+    '''Retrieve the NCBI gene database IDs for a gene name'''
     organism = args.organism
     search_term = '{}[organism] AND {}[sym]'.format(organism, gene_name)
     request = Entrez.esearch(db='gene', term=search_term, retmax=1000)
     try:
         result = Entrez.read(request)['IdList']
-    except Exception as e:
-        logging.warn("Cannot get gene ids for gene {}: {}".format(gene_name, e))
+    except Exception as exception:
+        logging.warn("Cannot get gene ids for gene {}: {}".
+            format(gene_name, exception))
         return []
     else:
         return result
 
 def fetch_records_from_ids(ids):
-    db = 'gene'
-    idString = ','.join(list(ids))
-    postRequest = Entrez.epost(db=db, id=idString)
-    postResult = Entrez.read(postRequest)
-    webEnv = postResult['WebEnv']
-    queryKey = postResult['QueryKey']
-    fetchRequest = Entrez.efetch(db=db,
-                                 webenv=webEnv,
-                                 query_key=queryKey,
+    '''Retrieve the NCBI gene database records for a list of database IDs'''
+    database = 'gene'
+    id_string = ','.join(list(ids))
+    post_request = Entrez.epost(db=database, id=id_string)
+    post_result = Entrez.read(post_request)
+    web_env = post_result['WebEnv']
+    query_key = post_result['QueryKey']
+    fetch_request = Entrez.efetch(db=database,
+                                 webenv=web_env,
+                                 query_key=query_key,
                                  retmode='xml')
-    return fetchRequest.read()
+    return fetch_request.read()
 
+class Regex(object):
+    '''Regular expression search term'''
 
-
-# how many characters either side of the match do
-# we keep as context
-context_width = 50
-
-class SearchTerm(object):
-    pass
-
-class Regex(SearchTerm):
     def __init__(self, term):
         self.term = term
         self.match = re.compile(term)
 
-    def search(self, args, string):
+    def search(self, string):
         """find the pattern in the string and
         return the context around the match"""
         spans = []
@@ -168,11 +201,15 @@ class Regex(SearchTerm):
 
 
 class TermMatch(object):
+    '''A representation of a term match containing its
+    context (the whole string where the match occurred, plus
+    all the spans (positions) of the matches'''
     def __init__(self, context, spans):
         self.context = context # string that was searched in
         self.spans = spans
 
 
 def parse_search_term(string):
+    '''Parse a string into a search term'''
     search_term = string.strip()
     return Regex(search_term)

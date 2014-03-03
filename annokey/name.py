@@ -1,3 +1,6 @@
-# Define the program name for error messages
+'''
+Define the program name.
+Particularly useful for error messages.
+'''
 
-program_name = 'annokey'
+PROGRAM_NAME = 'annokey'

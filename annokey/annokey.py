@@ -7,10 +7,10 @@ Annokey: a NCBI Gene Database Keyword Search Tool
 Authors:   Daniel Park, Sori Kang, Bernie Pope, Tu Nguyen-Dumont.
 Copyright: 2013, 2014
 Website:   https://github.com/bjpop/annokey
-License:   BSD, see LICENCE file in source distribution. 
+License:   BSD, see LICENCE file in source distribution.
 
 Searches the NCBI gene database for a given set of genes
-and a given set of search terms. 
+and a given set of search terms.
 '''
 
 import sys
@@ -18,12 +18,12 @@ import os
 from argparse import ArgumentParser
 from Bio import Entrez
 import logging
-from version import annokey_version
-from report import (DEFAULT_REPORT_FILE, init_report_page, report_hits,
-    write_report)
+from .version import ANNOKEY_VERSION
+from .report import (DEFAULT_REPORT_FILE, init_report_page, write_report)
 import socket
-from name import program_name
-from search import search_terms
+from .name import PROGRAM_NAME
+from .search import search_terms
+from .genecache import save_gene_cache
 
 DEFAULT_LOG_FILE = 'annokey_log.txt'
 
@@ -33,11 +33,13 @@ DEFAULT_GENE_DELIMITER = ','
 
 
 def parse_args():
+    'A parser for the command line arguments'
+
     parser = ArgumentParser(description='Search NCBI for genes of interest, '
                                         'based on concept-keyword search.')
 
     parser.add_argument(
-        '--version', action='version', version='%(prog)s ' + annokey_version)
+        '--version', action='version', version='%(prog)s ' + ANNOKEY_VERSION)
 
     parser.add_argument('--online',
                         action='store_true',
@@ -46,7 +48,8 @@ def parse_args():
     parser.add_argument('--cachesnapshot',
                         metavar='FILE',
                         type=str,
-                        help='Populate the gene cache from downloaded XML snapshot of NCBI gene database')
+                        help='Populate the gene cache from downloaded XML '
+                              'snapshot of NCBI gene database')
 
     parser.add_argument('--organism',
                         type=str,
@@ -88,7 +91,8 @@ def parse_args():
                              'name of the gene, one gene name per line.')
 
     parser.add_argument('--log', metavar='FILENAME', type=str,
-                        help='log progress in FILENAME, defaults to {}'.format(DEFAULT_LOG_FILE),
+                        help='log progress in FILENAME, defaults to {}'.
+                             format(DEFAULT_LOG_FILE),
                         default=DEFAULT_LOG_FILE)
 
     parser.add_argument('--delimiter', type=str,
@@ -96,21 +100,33 @@ def parse_args():
                         help='Delimiter for gene file.')
 
     parser.add_argument('--report', metavar='FILENAME', type=str,
-                        help='Save a detailed search report as HTML page, defaults to {}'.format(DEFAULT_REPORT_FILE),
+                        help='Save a detailed search report as HTML page, '
+                             'defaults to {}'.format(DEFAULT_REPORT_FILE),
                         default=DEFAULT_REPORT_FILE)
 
     parser.add_argument('--allmatches',
-                        help='Return all the matches of a search term in a database field, not just the first one',
+                        help='Return all the matches of a search term in a '
+                             'database field, not just the first one',
                         action='store_true')
 
     parser.add_argument('--pubmed',
-                       help='Search titles and abstracts in Pubmed entries referred to in each gene entry',
+                       help='Search titles and abstracts in Pubmed entries '
+                            'referred to in each gene entry',
                        action='store_true')
 
     return parser
 
 
 def get_gene_delimiter(args):
+    '''Determine the kind of delimiter to use in the Genes file.
+
+    1. Check if the --delimiter flag was set to something
+    sensible.
+    2. Otherwise, check if the filename ends in .csv or .tsv
+    3. Otherwise, use the default delimiter and emit a log
+       message to that effect.
+    '''
+
     if args.delimiter == 'comma':
         return ','
     elif args.delimiter == 'tab':
@@ -126,6 +142,8 @@ def get_gene_delimiter(args):
 
 
 def main():
+    '''Entry point for the program.'''
+
     args_parser = parse_args()
     args = args_parser.parse_args()
 
@@ -143,13 +161,14 @@ def main():
     logging.info('command line: {}'.format(command_line_text))
 
     if not ((args.terms and args.genes) or args.cachesnapshot):
-        print("\nERROR: Annokey requires --terms AND --genes OR --cachesnapshot\n")
+        print('\nERROR: Annokey requires --terms AND --genes OR '
+              '--cachesnapshot\n')
         args_parser.print_help()
         exit()
 
     if args.cachesnapshot:
         # Get gene information from specified XML file.
-        # Populate the genecache from the contents of the file. 
+        # Populate the genecache from the contents of the file.
         save_gene_cache(args)
 
     # only perform search if terms and genes are specified
@@ -159,13 +178,18 @@ def main():
             if args.email:
                 Entrez.email = args.email
             else:
-                exit('{}: an email address is required for online/pubmed queries, use the --email flag'.format(program_name))
+                exit('{}: an email address is required for online/pubmed '
+                     'queries, use the --email flag'.format(PROGRAM_NAME))
 
         args.delimiter = get_gene_delimiter(args)
-        report_page = init_report_page(hostname, working_directory, command_line_text)
+        report_page = init_report_page(hostname, working_directory,
+                          command_line_text)
         search_terms(args, report_page)
         write_report(args.report, report_page)
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        exit('{}: interrupted'.format(PROGRAM_NAME))

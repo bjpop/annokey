@@ -25,26 +25,27 @@ import subprocess
 from argparse import ArgumentParser
 
 # global variables
-ncbiServer = 'ftp.ncbi.nlm.nih.gov'
-homoSapiens = '/gene/DATA/ASN_BINARY/Mammalia/Homo_sapiens.ags.gz'
-verboseLevel = 2
+NCBI_SERVER = 'ftp.ncbi.nlm.nih.gov'
+HOMO_SAPIENS = '/gene/DATA/ASN_BINARY/Mammalia/Homo_sapiens.ags.gz'
+VERBOSE_LEVEL = 2
 
 
-class Namespace:
+class Namespace(object):
+    '''Class introducing a new namespace'''
     pass
 
 
 def print_verbose(level, message):
     '''Print a message if the level is less than the verbose level.'''
-    if level <= verboseLevel:
+    if level <= VERBOSE_LEVEL:
         print message
-    if verboseLevel >= 3 and message.startswith('  [Error Log]'):
+    if VERBOSE_LEVEL >= 3 and message.startswith('  [Error Log]'):
         raise
 
 
 def flush_verbose(level, message):
     '''Flush a message if the level is less than the verbose level.'''
-    if level <= verboseLevel:
+    if level <= VERBOSE_LEVEL:
         print message,
         sys.stdout.flush()
 
@@ -66,6 +67,7 @@ def convert_genetoxml(program, infile, outfile):
         return
 
     class GeneToXmlError(Exception):
+        '''Exception raised on conversion of gene entry to XML'''
         def __init__(self, value):
             self.value = value
 
@@ -81,12 +83,12 @@ def convert_genetoxml(program, infile, outfile):
         if ret != '':  # error occurs
             raise GeneToXmlError(ret)
 
-    except (subprocess.CalledProcessError, GeneToXmlError) as e:
+    except (subprocess.CalledProcessError, GeneToXmlError) as exception:
         if os.path.exists(outfile):
             os.remove(outfile)
         outfile = None
         print_verbose(0, 'Error occurred while converting data.')
-        print_verbose(0, '  [Error Log] ' + str(e))
+        print_verbose(0, '  [Error Log] ' + str(exception))
 
     except KeyboardInterrupt:
         if os.path.exists(outfile):
@@ -94,11 +96,11 @@ def convert_genetoxml(program, infile, outfile):
         outfile = None
         print_verbose(0, 'User interrupt. Finished program.')
 
-    except Exception as e:
+    except Exception as exception:
         if os.path.exists(outfile):
             os.remove(outfile)
         outfile = None
-        if e.errno == 2:  # linux.gene2xml is not in PATH
+        if exception.errno == 2:  # linux.gene2xml is not in PATH
             print_verbose(
                 0,
                 '[Error] '
@@ -109,7 +111,7 @@ def convert_genetoxml(program, infile, outfile):
         else:
             print_verbose(0, 'Undefined error occurs while '
                              'converting data to xml.')
-            print_verbose(0, '  [Error Log] ' + str(e.errno))
+            print_verbose(0, '  [Error Log] ' + str(exception.errno))
     else:
         print_verbose(2, '  >> Converting %s to %s is successful.'
                          % (infile, outfile))
@@ -130,7 +132,8 @@ class Ftp(object):
         self.ftp = None
 
     def connect(self):
-        # Connect FTP site and login.
+        '''Connect FTP site and login.'''
+
         if self.ftp is not None:
             print_verbose(0, '[Error] ftp connection is already established.')
             return
@@ -141,66 +144,68 @@ class Ftp(object):
             self.ftp.login()
             print_verbose(2, '  >> Connecting to server is successful.')
 
-        except ftplib.all_errors as e:
+        except ftplib.all_errors as exception:
             self.disconnect()
             print_verbose(0, 'Error occurs while connecting ftp server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         except KeyboardInterrupt:
             self.disconnect()
             print_verbose(0, 'User interrupt. Finished program.')
 
-        except Exception as e:
+        except Exception as exception:
             self.disconnect()
             print_verbose(0, 'Undefined error occurs while '
                              'connecting ftp server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         return self.ftp
 
     def get_last_modified_time(self, filepath):
-        # Get the last modified time of the file on the server.
-        # The server gives the result code and the value.
-        # e.g) '213 20120101051112'
+        '''Get the last modified time of the file on the server.
+        The server gives the result code and the value.
+        e.g) '213 20120101051112'
+        '''
         if self.ftp is None:
             print_verbose(0, '[Error] ftp server is not connected.')
             return
 
         class MDTMError(Exception):
+            '''Representation of modification time'''
             def __init__(self, value):
                 self.value = value
 
             def __str__(self):
                 return repr(self.value)
 
-        mdServer = None
+        md_server = None
         try:
             print_verbose(1, 'Starts getting the last modified time of data.')
-            modifiedTime = self.ftp.sendcmd('MDTM ' + filepath)
-            mdTimeResult = modifiedTime.split()
-            if mdTimeResult[0] == '213':  # 213 means successful
-                mdServer = int(mdTimeResult[1])
+            modified_time = self.ftp.sendcmd('MDTM ' + filepath)
+            md_time_result = modified_time.split()
+            if md_time_result[0] == '213':  # 213 means successful
+                md_server = int(md_time_result[1])
             else:
                 raise MDTMError('Fail to get the last modified time of data '
-                                'from server. [%s]' % modifiedTime)
+                                'from server. [%s]' % modified_time)
             print_verbose(2, '  >> Getting the last modified time of data '
                              'is successful.')
             print_verbose(2, '  >> The last modified time of the data '
-                             'at the server is %s' % str(mdServer))
+                             'at the server is %s' % str(md_server))
 
-        except (ftplib.all_errors, MDTMError) as e:
+        except (ftplib.all_errors, MDTMError) as exception:
             print_verbose(0, 'Error occurs while connecting ftp server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         except KeyboardInterrupt:
             print_verbose(0, 'User interrupt. Finished program.')
 
-        except Exception as e:
+        except Exception as exception:
             print_verbose(0, 'Undefined error occurs while '
                              'connecting the ftp server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
-        return mdServer
+        return md_server
 
     def get_size(self, filepath):
         '''Get the size of the file on the server.'''
@@ -208,26 +213,26 @@ class Ftp(object):
             print_verbose(0, '[Error] ftp server is not connected.')
             return
 
-        dataSize = None
+        data_size = None
         try:
             self.ftp.sendcmd('TYPE i')
-            dataSize = self.ftp.size(filepath)
-            dataSize = float(dataSize)
+            data_size = self.ftp.size(filepath)
+            data_size = float(data_size)
             print_verbose(2, '  >> The file size is %.2fM'
-                             % (dataSize/(1024**2)))
-        except ftplib.all_errors as e:
+                             % (data_size/(1024**2)))
+        except ftplib.all_errors as exception:
             print_verbose(0, 'Error occurs while getting file size.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         except KeyboardInterrupt:
             print_verbose(0, 'User interrupt. Finished program.')
 
-        except Exception as e:
+        except Exception as exception:
             print_verbose(0, 'Undefined error occurs while '
                              'getting file size from server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
-        return dataSize
+        return data_size
 
     def download(self, filepath, outfilename):
         '''Download the file from the server and save it named outfilename'''
@@ -241,17 +246,18 @@ class Ftp(object):
         try:
             # Get data size for progressbar
             self.ftp.sendcmd('TYPE i')
-            dataSize = self.ftp.size(filepath)
-            dataSize = float(dataSize)
+            data_size = self.ftp.size(filepath)
+            data_size = float(data_size)
             print_verbose(2, '  >> The file size is %.2fM'
-                             % (dataSize/(1024**2)))
-            ns = Namespace()
-            ns.downloadedSize = 0
-            with open(storefile, 'wb') as f:
+                             % (data_size/(1024**2)))
+            namespace = Namespace()
+            namespace.downloaded_size = 0
+            with open(storefile, 'wb') as the_file:
                 def callback(data):
-                    f.write(data)
-                    ns.downloadedSize += len(data)
-                    percent = ns.downloadedSize/dataSize*100
+                    '''write data and display progress'''
+                    the_file.write(data)
+                    namespace.downloaded_size += len(data)
+                    percent = namespace.downloaded_size/data_size*100
                     flush_verbose(2, '\b'*8 + '%6.2f%%' % percent)
 
                 flush_verbose(2, '  >> Downloading...               ')
@@ -260,13 +266,13 @@ class Ftp(object):
             print_verbose(2, '\n  >> Downloading data is successful.')
             print_verbose(2, '  >> %s is stored.' % storefile)
 
-        except (IOError, ftplib.all_errors) as e:
+        except (IOError, ftplib.all_errors) as exception:
             if os.path.exists(storefile):
                 os.remove(storefile)
             storefile = None
             print_verbose(0, '\nError occurs while'
                              'downloading data from server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         except KeyboardInterrupt:
             if os.path.exists(storefile):
@@ -274,13 +280,13 @@ class Ftp(object):
             storefile = None
             print_verbose(0, '\nUser interrupt. Finished program.')
 
-        except Exception as e:
+        except Exception as exception:
             if os.path.exists(storefile):
                 os.remove(storefile)
             storefile = None
             print_verbose(0, '\nUndefined error occurs '
                              'downloading data from server.')
-            print_verbose(0, '  [Error Log] ' + str(e))
+            print_verbose(0, '  [Error Log] ' + str(exception))
 
         return storefile
 
@@ -295,7 +301,7 @@ class Ftp(object):
             # KeyboardInterrupt occurs while downloading.
             # As this exception is not the exceptions that should be handled,
             # ignore the exceptions.
-            except ftplib.all_errors as e:
+            except ftplib.all_errors:
                 pass
                 #print_verbose(3, 'Error occurs while '
                 #                 'quitting ftp connection.')
@@ -303,7 +309,7 @@ class Ftp(object):
             except KeyboardInterrupt:
                 pass
                 #print_verbose(3, 'User interrupt. Finished program.')
-            except Exception as e:
+            except Exception:
                 pass
                 #print_verbose(3, 'Undefined error occurs while '
                 #                 'quitting ftp connection.')
@@ -313,6 +319,8 @@ class Ftp(object):
 
 
 def parse_args():
+    '''Create a command line argument parser.'''
+
     parser = ArgumentParser(
         description=('This program downloads gene data from '
                      'the ftp server and converting data to '
@@ -388,6 +396,7 @@ def parse_args():
 
 
 def main():
+    '''Program entry point'''
 
     def get_program_path(path):
         '''Determine the linux.gene2xml path by looking up the input path.'''
@@ -408,9 +417,9 @@ def main():
 
     # Parse the optional arguments.
     args = parse_args()
-    # Set the verboseLevel for printing messages according to its level.
-    global verboseLevel
-    verboseLevel = args.verbose
+    # Set the VERBOSE_LEVEL for printing messages according to its level.
+    global VERBOSE_LEVEL
+    VERBOSE_LEVEL = args.verbose
     # The options downloadonly and convertonly cannot coexist together.
     if args.downloadonly and args.convertonly:
         print_verbose(0, '[Error]'
@@ -426,31 +435,31 @@ def main():
         return
     # Determine the ftp server.
     if args.ftpsite is None:
-        ftpServer = ncbiServer
+        ftp_server = NCBI_SERVER
     else:
-        ftpServer = args.ftpsite
+        ftp_server = args.ftpsite
     # Determine data to be downloaded.
     if args.filepath is None:
-        dataFilepath = homoSapiens
+        data_filepath = HOMO_SAPIENS
     else:
-        dataFilepath = args.filepath
+        data_filepath = args.filepath
 
-    doConvert = True
-    isUptodateXml = False
-    uptodateAgsfile = None
-    uptodateXmlfile = None
+    do_convert = True
+    is_uptodate_xml = False
+    uptodate_agsfile = None
+    uptodate_xml_file = None
     # If convertonly is on, not downloading file.
     # If convertonly is off, start connecting to ftp server for downloading.
     if not args.convertonly:
         # Connect to ftp server and login.
-        ftp = Ftp(ftpServer)
+        ftp = Ftp(ftp_server)
         if ftp.connect() is None:
             return
 
         # Check the last modified time of the file.
-        isUptodateAgs = True
-        mdServer = ftp.get_last_modified_time(dataFilepath)
-        if mdServer is None:
+        is_uptodate_ags = True
+        md_server = ftp.get_last_modified_time(data_filepath)
+        if md_server is None:
             ftp.disconnect()
             return
 
@@ -458,35 +467,35 @@ def main():
         # As downloaded file has the name in
         # {gene database name}_yyyymmddhhmmss.{extension} format,
         # extracting file name and extension is necessary.
-        filename = dataFilepath[dataFilepath.rfind('/')+1:]
-        extPosition = filename.find('.')
-        filePrefix = filename[:extPosition]
-        fileExt = filename[extPosition:]
-        uptodateAgsfile = '%s_%s%s' % (filePrefix, mdServer, fileExt)
-        uptodateXmlfile = '%s_%s%s' % (filePrefix, mdServer, '.xml')
+        filename = data_filepath[data_filepath.rfind('/')+1:]
+        ext_position = filename.find('.')
+        file_prefix = filename[:ext_position]
+        file_ext = filename[ext_position:]
+        uptodate_agsfile = '%s_%s%s' % (file_prefix, md_server, file_ext)
+        uptodate_xml_file = '%s_%s%s' % (file_prefix, md_server, '.xml')
         # If option force is not on,
         # check whether the local directory has the same version or not.
         if not args.force:
             # Get modified time of the files that were retrieved.
-            mdFiles = []
-            files = glob.glob('./%s_[0-9]*%s' % (filePrefix, fileExt))
-            for file in files:
-                m = re.match('\.\/%s_([0-9]{14})%s' %
-                             (filePrefix, fileExt), file)
-                mdFiles.append(int(m.group(1)))
+            md_files = []
+            files = glob.glob('./%s_[0-9]*%s' % (file_prefix, file_ext))
+            for the_file in files:
+                match = re.match(r'\.\/%s_([0-9]{14})%s' %
+                             (file_prefix, file_ext), the_file)
+                md_files.append(int(match.group(1)))
 
             # Compare the modified time.
             # If there is no files starting with the prefix of database or
             # the file version is not the latest version,
             # the local directory is regarded as
             # not having the latest version.
-            mdFiles.sort()
-            if not mdFiles or mdFiles[-1] < mdServer:
-                isUptodateAgs = False
+            md_files.sort()
+            if not md_files or md_files[-1] < md_server:
+                is_uptodate_ags = False
 
         # Check whether the up-to-date version of xml is
         # in the local directory
-        isUptodateXml = os.path.exists(uptodateXmlfile)
+        is_uptodate_xml = os.path.exists(uptodate_xml_file)
 
         # If option force is on or
         # if the local directory have not the latest version of the database,
@@ -495,49 +504,49 @@ def main():
         # If the xml file is in the directory,
         # disconnect ftp connection and finish the program.
         # If the xml file is not in the directory, convert the arg file.
-        if not isUptodateAgs or args.force:
-            uptodateAgsfile = ftp.download(dataFilepath, uptodateAgsfile)
-            if uptodateAgsfile is None:
+        if not is_uptodate_ags or args.force:
+            uptodate_agsfile = ftp.download(data_filepath, uptodate_agsfile)
+            if uptodate_agsfile is None:
                 ftp.disconnect()
                 return
         else:
             print_verbose(0, 'You already have the latest version of '
-                             'the file (%s).' % uptodateAgsfile)
+                             'the file (%s).' % uptodate_agsfile)
 
         ftp.disconnect()
 
     # Determine converting operation.
     if args.convertonly:
         # Check the corresponding xml file of the requested ags file.
-        uptodateAgsfile = args.convertonly
-        uptodateXmlfile = '%s%s' % \
-                          (uptodateAgsfile[:uptodateAgsfile.rfind('.ags')],
+        uptodate_agsfile = args.convertonly
+        uptodate_xml_file = '%s%s' % \
+                          (uptodate_agsfile[:uptodate_agsfile.rfind('.ags')],
                            '.xml')
-        if os.path.exists(uptodateXmlfile):
-            doConvert = False
+        if os.path.exists(uptodate_xml_file):
+            do_convert = False
             print_verbose(0, 'You already have the converted file (%s).' %
-                             uptodateXmlfile)
+                             uptodate_xml_file)
         else:
-            doConvert = True
+            do_convert = True
     else:
         # Check the corresponding xml file of the downloaded ags file.
         if args.downloadonly:
-            doConvert = False
+            do_convert = False
         else:
-            if isUptodateXml:
-                doConvert = False
+            if is_uptodate_xml:
+                do_convert = False
                 print_verbose(0, 'You already have the latest version '
-                                 'of the xml file (%s).' % uptodateXmlfile)
+                                 'of the xml file (%s).' % uptodate_xml_file)
             else:
-                doConvert = True
+                do_convert = True
 
     # Convert the file to xml using linux.gene2xml.
     # If downloadonly option is give, converting would not be executed.
-    if not args.downloadonly and doConvert:
-        uptodateXmlfile = convert_genetoxml(gene2xml,
-                                            uptodateAgsfile,
-                                            uptodateXmlfile)
-        if uptodateXmlfile is None:
+    if not args.downloadonly and do_convert:
+        uptodate_xml_file = convert_genetoxml(gene2xml,
+                                            uptodate_agsfile,
+                                            uptodate_xml_file)
+        if uptodate_xml_file is None:
             return
 
     # Done. Finish the program.

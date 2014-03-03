@@ -1,12 +1,24 @@
+'''
+Process the XML structure of the NCBI gene database and
+the Pubmed database.
+'''
+
 import os
 from Bio import Entrez
 from lxml import etree
 from StringIO import StringIO
-import itertools
 import logging
-from pubmedcache import (make_pubmed_cache_dirname, save_pubmed_cache)
+from .pubmedcache import (make_pubmed_cache_dirname, save_pubmed_cache)
 
+# XXX maybe should be a named tuple
 class GeneHit(object):
+    '''A hit for a key term in a field.
+       Records:
+           - the search term that was used
+           - the rank of the search term
+           - the name of the database field where the match was made
+           - the match object
+    '''
     def __init__(self, search_term, rank, field, match):
         self.search_term = search_term # string
         self.rank = rank # int
@@ -14,102 +26,125 @@ class GeneHit(object):
         self.match = match # TermMatch
 
 class GeneParser(object):
-    
+    '''Processing a Gene XML record, and associated pubmed ids'''
     @staticmethod
     def term_hit(args, xml, search_terms):
+        '''For a given gene XML entry find all the hits for all
+        the given search terms. Yield the hits one at a time.
+        '''
         # parse given xml and extract what we are interested in.
         # look up search_terms from extracted content of gene.
-        parser = etree.iterparse(StringIO(xml), events=('end',), tag='Entrezgene')
-        for event, geneEntry in parser:
-            geneId, content = get_geneContent(geneEntry)
-            for hit in search_terms_in_dict(args, content, search_terms, geneId):
+        parser = etree.iterparse(StringIO(xml), events=('end',),
+            tag='Entrezgene')
+        for _, gene_entry in parser:
+            gene_id, content = get_gene_content(gene_entry)
+            for hit in search_terms_in_dict(content, search_terms):
                 yield hit
             if args.pubmed:
-                for hit in search_terms_in_pubmed(args, content["PmIds"], search_terms, geneId):
+                for hit in search_terms_in_pubmed(args, content["PmIds"],
+                    search_terms):
                     yield hit
 
     @staticmethod
     def pubmed_ids(xmlfile):
-        # parse given xmlfile and extract pubmed ids.
+        '''Parse given Gene xmlfile and extract pubmed ids'''
         pmids = []
         parser = etree.iterparse(xmlfile, events=('end',), tag='Entrezgene')
-        for event, geneEntry in parser:
-            elem = geneEntry.find('.//Entrezgene_comments/Gene-commentary/Gene-commentary_refs')
+        for _, gene_entry in parser:
+            elem = gene_entry.find('.//Entrezgene_comments/'
+                                  'Gene-commentary/Gene-commentary_refs')
             if elem is not None:
                 for pub in elem.iterchildren():
-                    pubMedId = pub.find('.//Pub_pmid/PubMedId')
-                    if pubMedId is not None and pubMedId.text is not None:
-                        pmids.append(pubMedId.text)
+                    pubmed_id = pub.find('.//Pub_pmid/PubMedId')
+                    if pubmed_id is not None and pubmed_id.text is not None:
+                        pmids.append(pubmed_id.text)
         return set(pmids)
 
 
 class PubMedParser(object):
+    '''Parse pubmed article and find hits for search terms'''
 
     @staticmethod
-    def term_hit(args, xml, search_terms):
+    def term_hit(xml, search_terms):
+        '''For the XML content of a pubmed article, search for
+        each of the search terms. Yield each hit one at a time.
+        '''
         # Parse the given xmlfile and return search_terms hit.
-        parser = etree.iterparse(StringIO(xml), events=('end',), tag='PubmedArticle')
-        for event, pubmed_entry in parser:
-            content =  get_pubmed_content(pubmed_entry)
+        parser = etree.iterparse(StringIO(xml), events=('end',),
+            tag='PubmedArticle')
+        for _, pubmed_entry in parser:
+            content = get_pubmed_content(pubmed_entry)
             # scan title and abstract only for search_term search.
             title_abst = ''
             try:
-                title_abst = content['Article Title'] + ' ' + content['Abstract']
+                title_abst = content['Article Title'] + ' ' + \
+                    content['Abstract']
             except KeyError:
                 pass
             for rank, search_term in enumerate(search_terms, 1):
-                match = search_term.search(args, title_abst)
+                match = search_term.search(title_abst)
                 if match is not None:
                     yield GeneHit(search_term, rank, 'PubMed', match)
 
-def search_terms_in_pubmed(args, ids, search_terms, gene_id):
+def search_terms_in_pubmed(args, ids, search_terms):
+    '''Lookup pubmed records by their IDs and then search for each
+    term in the given list of terms. Yield each hit one at a time.
+    '''
     for pubmed_record in get_pubmed_records(args, ids):
-        for hit in PubMedParser.term_hit(args, pubmed_record, search_terms):
+        for hit in PubMedParser.term_hit(pubmed_record, search_terms):
             yield hit
 
 # Keep a in-memory cache of pubmed records indexed by the Pubmed id.
 # Stops us from requesting it again from online, or from looking again
 # in the file cache.
-seen_pubmed_records = {}
+SEEN_PUBMED_RECORDS = {}
 
-def get_pubmed_records(args, ids):
+def get_pubmed_records(args, pubmed_ids):
+    '''Retrieve the pubmed XML records for the given list of pubmed ids.
+    We look for the records in the file cache first, before trying to
+    fetch them online.
+    '''
+
     not_seen_ids = set()
 
     # Check for records that we've previously already retrieved.
-    for id in ids:
-        if id in seen_pubmed_records:
-            yield seen_pubmed_records[id]
+    for pubmed_id in pubmed_ids:
+        if pubmed_id in SEEN_PUBMED_RECORDS:
+            yield SEEN_PUBMED_RECORDS[pubmed_id]
         else:
-            not_seen_ids.add(id)
+            not_seen_ids.add(pubmed_id)
 
     not_filecached_ids = set()
 
     # look for the records in the file cache
-    for id in not_seen_ids:
-        pubmed_filename = lookup_pubmed_cache(args.pubmedcache, id)
+    for pubmed_id in not_seen_ids:
+        pubmed_filename = lookup_pubmed_cache(args.pubmedcache, pubmed_id)
         if pubmed_filename is not None:
             try:
                 with open(pubmed_filename) as pubmed_file:
                     pubmed_xml = pubmed_file.read()
-                    seen_pubmed_records[id] = pubmed_xml
+                    SEEN_PUBMED_RECORDS[pubmed_id] = pubmed_xml
                     yield pubmed_xml
-            except EnvironmentError as e:
-                logging.warn("Could not open or read pubmed file: {}".format(pubmed_filename))
+            except EnvironmentError:
+                logging.warn("Could not open or read pubmed file: {}"
+                    .format(pubmed_filename))
         else:
-            logging.info("Could not find pubmed article {} in cache".format(id))
-            not_filecached_ids.add(id)
+            logging.info("Could not find pubmed article {} in cache"
+                .format(pubmed_id))
+            not_filecached_ids.add(pubmed_id)
 
     # Each record from online search could contain many pubmed records.
-    # So we split them up and save them individually in the 
-    # seen_pubmed_records dictionary.
+    # So we split them up and save them individually in the
+    # SEEN_PUBMED_RECORDS dictionary.
     for record in fetch_pubmed_records_online(not_filecached_ids):
-        parser = etree.iterparse(StringIO(record), events=('end',), tag='PubmedArticle')
-        for event, pubmed_entry in parser:
+        parser = etree.iterparse(StringIO(record), events=('end',),
+            tag='PubmedArticle')
+        for _, pubmed_entry in parser:
             # Find pubmed id
             pubmed_id = pubmed_entry.find('.//MedlineCitation/PMID').text
             logging.info("Found pubmed article {} online".format(pubmed_id))
             record = etree.tostring(pubmed_entry)
-            seen_pubmed_records[pubmed_id] = record
+            SEEN_PUBMED_RECORDS[pubmed_id] = record
             save_pubmed_cache(args.pubmedcache, pubmed_id, record)
             # free up memory used by the XML iterative parser
             pubmed_entry.clear()
@@ -119,35 +154,42 @@ def get_pubmed_records(args, ids):
 
 
 def fetch_pubmed_records_online(ids):
+    '''Fetch the pubmed records from the online Pubmed database
+    given a list of their Pubmed Ids.
+    '''
     if len(ids) > 0:
-        idString = ','.join(ids)
-        postRequest = Entrez.epost(db='pubmed', id=idString)
-        postResult = Entrez.read(postRequest)
-        webEnv = postResult['WebEnv']
-        queryKey = postResult['QueryKey']
+        id_string = ','.join(ids)
+        post_request = Entrez.epost(db='pubmed', id=id_string)
+        post_result = Entrez.read(post_request)
+        web_env = post_result['WebEnv']
+        query_key = post_result['QueryKey']
         retstart = 0
         chunk_size = 10000
 
         while retstart < len(ids):
             try:
                 fetch_request = Entrez.efetch(db='pubmed',
-                                              webenv=webEnv,
-                                              query_key=queryKey,
+                                              webenv=web_env,
+                                              query_key=query_key,
                                               retmode='xml',
                                               retmax=chunk_size,
                                               retstart=retstart)
                 yield fetch_request.read()
 
-            except Exception as e:
-                logging.warn("pubmed fetch failed: {}".format(e))
+            except Exception as exception:
+                logging.warn("pubmed fetch failed: {}".format(exception))
                 break
 
             retstart += chunk_size
 
 
-def lookup_pubmed_cache(cachedir, id):
-    pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, id)
-    pubmed_cache_filename = os.path.join(pubmed_cache_dir, id)
+def lookup_pubmed_cache(cachedir, pubmed_id):
+    '''Try to find the file containing a given Pubmed article
+    from the Pubmed file cache based on its Pubmed id.
+    If it can't be found return None
+    '''
+    pubmed_cache_dir = make_pubmed_cache_dirname(cachedir, pubmed_id)
+    pubmed_cache_filename = os.path.join(pubmed_cache_dir, pubmed_id)
     if os.path.isfile(pubmed_cache_filename):
         return pubmed_cache_filename
 
@@ -179,73 +221,67 @@ def lookup_pubmed_cache(cachedir, id):
 #
 
 
-def get_pubmed_content(pubmedEntry):
+def get_pubmed_content(pubmed_entry):
     '''Parse element PubmedArticle'''
-    pubmedContent = {}
-    for elem in pubmedEntry.iterchildren():
+    pubmed_content = {}
+    for elem in pubmed_entry.iterchildren():
         if elem.tag == 'MedlineCitation':
             pmid = elem.find('.//PMID')
             if pmid is not None and pmid.text is not None:
-                pubmedContent['PMID'] = pmid.text
+                pubmed_content['PMID'] = pmid.text
             article = elem.find('.//Article')
             if article is not None:
                 journal = elem.find('.//Journal')
-                articleTitle = elem.find('.//ArticleTitle')
+                article_title = elem.find('.//ArticleTitle')
                 pagination = elem.find('.//Pagination')
                 abstract = elem.find('.//Abstract')
             if journal is not None:
                 volume = journal.find('.//JournalIssue/Volume')
                 issue = journal.find('.//JournalIssue/Issue')
                 pubdate = journal.find('.//JournalIssue/PubDate/Year')
-                journalTitle = journal.find('.//Title')
+                journal_title = journal.find('.//Title')
             if volume is not None and volume.text is not None:
-                pubmedContent['Volume'] = volume.text
+                pubmed_content['Volume'] = volume.text
             if issue is not None and issue.text is not None:
-                pubmedContent['Issue'] = issue.text
+                pubmed_content['Issue'] = issue.text
             if pubdate is not None and pubdate.text is not None:
-                pubmedContent['Year'] = pubdate.text
-            if journalTitle is not None and journalTitle.text is not None:
-                pubmedContent['Journal Title'] = journalTitle.text
-            if articleTitle is not None and articleTitle.text is not None:
-                pubmedContent['Article Title'] = articleTitle.text
+                pubmed_content['Year'] = pubdate.text
+            if journal_title is not None and journal_title.text is not None:
+                pubmed_content['Journal Title'] = journal_title.text
+            if article_title is not None and article_title.text is not None:
+                pubmed_content['Article Title'] = article_title.text
             if pagination is not None and pagination.text is not None:
                 pgn = pagination.find('.//MedlinePgn')
                 if pgn is not None and pgn.text is not None:
-                    pubmedContent['Pagination'] = pgn.text
+                    pubmed_content['Pagination'] = pgn.text
             if abstract is not None:
-                abstractText = ''
-                for abstractChild in abstract.iterchildren():
-                    if abstractChild.tag == 'AbstractText':
-                        if abstractChild.text is not None:
-                            abstractText += abstractChild.text
-                pubmedContent['Abstract'] = abstractText
-    return pubmedContent
+                abstract_text = ''
+                for abstract_child in abstract.iterchildren():
+                    if abstract_child.tag == 'AbstractText':
+                        if abstract_child.text is not None:
+                            abstract_text += abstract_child.text
+                pubmed_content['Abstract'] = abstract_text
+    return pubmed_content
 
 
-def merge_geneContent(geneContent, values):
+def merge_gene_content(gene_content, values):
     '''Merge gene information.
 
     Args:
-         geneContent: dict containing gene information.
-                      values to be merged into this geneContent.
+         gene_content: dict containing gene information.
+                      values to be merged into this gene_content.
          values: a list of tuple containing gene information.
-                 It is to be merged into geneContent.
+                 It is to be merged into gene_content.
     Returns:
          A dict containing gene information.
     '''
 
     for term, value in values:
-        geneContent[term] += value 
-    return geneContent
+        gene_content[term] += value
+    return gene_content
 
 
-def get_geneName(geneEntry):
-    name = geneEntry.find('.//Entrezgene_gene/Gene-ref/Gene-ref_locus')
-    if name is not None and name.text is not None:
-        return name.text
-
-
-def get_otherSourceAnchor(entry):
+def get_other_source_anchor(entry):
     '''Find the element 'Other-source_anchor',
        and return the list of achor.
     '''
@@ -262,27 +298,23 @@ def get_otherSourceAnchor(entry):
     return result
 
 
-def parse_geneCommentary(commentary):
+def parse_gene_commentary(commentary):
     '''Parse element 'Gene-commentary'''
 
-    retValues = []
+    return_values = []
 
     rifs = []
     pathways = []
     pmids = set()
     interactions = []
-    conserved = []
-    functions = []
-    components = []
-    processes = []
 
-    type = ''
+    element_type = ''
     heading = ''
     label = ''
 
     for item in commentary.iterchildren():
         if item.tag == 'Gene-commentary_type':
-            type = item.attrib['value']
+            element_type = item.attrib['value']
 
         if item.tag == 'Gene-commentary_heading':
             heading = item.text
@@ -291,20 +323,20 @@ def parse_geneCommentary(commentary):
             label = item.text
 
         if item.tag == 'Gene-commentary_text':
-            if type == 'generif' and item.text is not None:
+            if element_type == 'generif' and item.text is not None:
                 rifs.append(item.text)
-                retValues.append(('GeneRIFs', rifs))
+                return_values.append(('GeneRIFs', rifs))
 
         if item.tag == 'Gene-commentary_refs':
             for pub in item.iterchildren():
-                pubMedId = pub.find('.//Pub_pmid/PubMedId')
-                if pubMedId is not None and pubMedId.text is not None:
-                    pmids.add(pubMedId.text)
-            retValues.append(('PmIds', pmids))
+                pubmed_id = pub.find('.//Pub_pmid/PubMedId')
+                if pubmed_id is not None and pubmed_id.text is not None:
+                    pmids.add(pubmed_id.text)
+            return_values.append(('PmIds', pmids))
 
         if item.tag == 'Gene-commentary_products':
             for child in item.iterchildren():
-                retValues += parse_geneCommentary(child)
+                return_values += parse_gene_commentary(child)
 
         if item.tag == 'Gene-commentary_comment':
             if heading == 'Pathways':
@@ -312,35 +344,35 @@ def parse_geneCommentary(commentary):
                     pathway = child.find('.//Gene-commentary_text')
                     if pathway is not None and pathway.text is not None:
                         pathways.append(pathway.text)
-                retValues.append(('Pathways', pathways))
+                return_values.append(('Pathways', pathways))
 
             elif heading == 'Interactions':
                 interactions = []
                 for child in item.iterchildren():
-                    subComment = item.find('.//Gene-commentary_comment')
-                    for grandChild in child.iterchildren():
-                        interactions += get_otherSourceAnchor(grandChild)
-                retValues.append(('Interactions', interactions))
+                    #sub_comment = item.find('.//Gene-commentary_comment')
+                    for grandchild in child.iterchildren():
+                        interactions += get_other_source_anchor(grandchild)
+                return_values.append(('Interactions', interactions))
 
             elif heading == 'NCBI Reference Sequences (RefSeq)':
                 for child in item.iterchildren():
-                    retValues += parse_geneCommentary(child)
+                    return_values += parse_gene_commentary(child)
 
             elif heading == 'Conserved Domains':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Conserved Domains', result))
+                result = get_other_source_anchor(item)
+                return_values.append(('Conserved Domains', result))
 
             elif label == 'Function':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Function', result))
+                result = get_other_source_anchor(item)
+                return_values.append(('Function', result))
 
             elif label == 'Component':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Component', result))
+                result = get_other_source_anchor(item)
+                return_values.append(('Component', result))
 
             elif label == 'Process':
-                result = get_otherSourceAnchor(item)
-                retValues.append(('Process', result))
+                result = get_other_source_anchor(item)
+                return_values.append(('Process', result))
 
             else:
                 # Find 'Conserved Domains'
@@ -349,14 +381,14 @@ def parse_geneCommentary(commentary):
                         heading = child.find('.//Gene-commentary_heading')
                         if (heading is not None and
                                 heading.text == 'Conserved Domains'):
-                            retValues += parse_geneCommentary(child)
+                            return_values += parse_gene_commentary(child)
 
-    return retValues
+    return return_values
 
-def get_geneContent(geneEntry):
+def get_gene_content(gene_entry):
     '''Parse element Entrezgene.'''
 
-    geneContent = {'Gene Name': [],
+    gene_content = {'Gene Name': [],
                    'Description': [],
                    'Synonyms': [],
                    'Alternative Name': [],
@@ -369,12 +401,12 @@ def get_geneContent(geneEntry):
                    'Function': [],
                    'Component': [],
                    'Process': []}
-    geneId = None
+    gene_id = None
 
-    for elem in geneEntry.iterchildren():
+    for elem in gene_entry.iterchildren():
 
         if elem.tag == 'Entrezgene_track-info':
-            geneId = elem.find('.//Gene-track/Gene-track_geneid').text
+            gene_id = elem.find('.//Gene-track/Gene-track_geneid').text
             status = elem.find('.//Gene-track/Gene-track_status')
             if (status is not None and
                     status.attrib['value'] == 'discontinued'):
@@ -386,44 +418,47 @@ def get_geneContent(geneEntry):
             desc = ref.find('.//Gene-ref_desc')
             syn = ref.find('.//Gene-ref_syn')
             if name is not None and name.text is not None:
-                geneContent['Gene Name'].append(name.text)
+                gene_content['Gene Name'].append(name.text)
             if desc is not None and desc.text is not None:
-                geneContent['Description'].append(desc.text)
+                gene_content['Description'].append(desc.text)
             if syn is not None:
                 for child in syn.iterchildren():
                     if (child.tag == 'Gene-ref_syn_E' and
                             child.text is not None):
-                        geneContent['Synonyms'].append(child.text)
+                        gene_content['Synonyms'].append(child.text)
 
         elif elem.tag == 'Entrezgene_summary' and elem.text is not None:
-            geneContent['Summary'].append(elem.text)
+            gene_content['Summary'].append(elem.text)
 
         elif elem.tag == 'Entrezgene_comments':
-            for subElem in elem.iterchildren():
-                result = parse_geneCommentary(subElem)
-                geneContent = merge_geneContent(geneContent, result)
+            for sub_elem in elem.iterchildren():
+                result = parse_gene_commentary(sub_elem)
+                gene_content = merge_gene_content(gene_content, result)
 
         elif elem.tag == 'Entrezgene_properties':
             entry = elem.find('.//Gene-commentary/Gene-commentary_comment')
             if entry is not None:
                 for child in entry.iterchildren():
-                    result = parse_geneCommentary(child)
-                    geneContent = merge_geneContent(geneContent, result)
+                    result = parse_gene_commentary(child)
+                    gene_content = merge_gene_content(gene_content, result)
 
         elif elem.tag == 'Entrezgene_prot':
-            alterName = elem.find('.//Prot-ref/Prot-ref_name')
-            if alterName is not None:
-                for name in alterName.iterchildren():
+            alter_name = elem.find('.//Prot-ref/Prot-ref_name')
+            if alter_name is not None:
+                for name in alter_name.iterchildren():
                     if (name.tag == 'Prot-ref_name_E' and
                             name.text is not None):
-                        geneContent['Alternative Name'].append(name.text)
-    return (geneId, geneContent)
+                        gene_content['Alternative Name'].append(name.text)
+    return (gene_id, gene_content)
 
 
-def search_terms_in_dict(args, dbEntry, search_terms, geneID):
+def search_terms_in_dict(db_entry, search_terms):
+    '''Iteratate over all the entries in a dictionary and search
+    for each search term in each entry.
+    '''
     for rank, search_term in enumerate(search_terms, 1):
-        for field, content in dbEntry.iteritems():
+        for field, content in db_entry.iteritems():
             for item in content:
-                match = search_term.search(args, item)
+                match = search_term.search(item)
                 if match is not None:
                     yield GeneHit(search_term, rank, field, match)
