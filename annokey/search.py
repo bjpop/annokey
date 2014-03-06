@@ -74,7 +74,7 @@ def summarise_hits(all_hits):
         return ['', '', '']
 
 
-def search_terms(args, report_page):
+def search_terms(args, report_file):
     '''For each gene in the input, search for occurrences
     of each of the search terms.
 
@@ -95,9 +95,9 @@ def search_terms(args, report_page):
             format(PROGRAM_NAME, exception))
 
     if len(terms) > 0:
-        search_terms_worker(args, terms, report_page)
+        search_terms_worker(args, terms, report_file)
 
-def search_terms_worker(args, terms, report_page):
+def search_terms_worker(args, terms, report_file):
     '''Worker function for search_terms.'''
 
     with open(args.genes) as genesfile:
@@ -110,6 +110,10 @@ def search_terms_worker(args, terms, report_page):
         writer.writerow(new_header)
         # for each row in the genes file, find hits for the gene
         # print the row out with the hits annoated on the end
+
+        # we use the gene_count to generate unique <div> ids in the output
+        # HTML report.
+        gene_count = 0
         for input_row in reader:
             try:
                 gene_name = input_row['Gene'].strip()
@@ -117,16 +121,16 @@ def search_terms_worker(args, terms, report_page):
                 exit("{}: can't find Gene column in input gene file".
                     format(PROGRAM_NAME))
             else:
-                for gene_count, (gene_db_id, gene_xml) in \
-                        enumerate(get_gene_records(args, gene_name)):
+                for gene_db_id, gene_xml in get_gene_records(args, gene_name):
                     hits = list(GeneParser.term_hit(args, gene_xml, terms))
                     all_hits = aggregate_hits(hits)
                     summary = summarise_hits(all_hits)
                     output_row = [input_row[field] for field in
                                  reader.fieldnames]
                     writer.writerow(output_row + summary)
-                    report_hits(gene_count, gene_name, gene_db_id, all_hits,
-                        report_page)
+                    report_hits(report_file, gene_count, gene_name, gene_db_id,
+                        all_hits)
+                    gene_count += 1
 
 
 def get_gene_records(args, gene_name):

@@ -19,7 +19,9 @@ from argparse import ArgumentParser
 from Bio import Entrez
 import logging
 from .version import ANNOKEY_VERSION
-from .report import (DEFAULT_REPORT_FILE, init_report_page, write_report)
+#from .report import (DEFAULT_REPORT_FILE, init_report_page, write_report)
+from .report import (DEFAULT_REPORT_FILE, report_head, report_foot,
+    report_meta_info)
 import socket
 from .name import PROGRAM_NAME
 from .search import search_terms
@@ -156,6 +158,7 @@ def main():
     command_line_text = "annokey " + ' '.join(sys.argv[1:])
     working_directory = os.getcwd()
     hostname = socket.gethostname()
+    logging.info('annokey version: {}'.format(ANNOKEY_VERSION))
     logging.info('hostname: {}'.format(hostname))
     logging.info('working directory: {}'.format(working_directory))
     logging.info('command line: {}'.format(command_line_text))
@@ -182,10 +185,13 @@ def main():
                      'queries, use the --email flag'.format(PROGRAM_NAME))
 
         args.delimiter = get_gene_delimiter(args)
-        report_page = init_report_page(hostname, working_directory,
-                          command_line_text)
-        search_terms(args, report_page)
-        write_report(args.report, report_page)
+
+        with open(args.report, "w") as report_file:
+            report_head(report_file)
+            report_meta_info(report_file, ANNOKEY_VERSION, hostname,
+                working_directory, command_line_text)
+            search_terms(args, report_file)
+            report_foot(report_file)
 
 
 if __name__ == '__main__':
