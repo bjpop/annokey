@@ -58,12 +58,18 @@
 <a name="quick-start-online-mode" class="anchor" href="#quick-start-online-mode"><span class="octicon octicon-link"></span></a>Quick start online mode</h5>
 
 <ul>
-<li>Run annokey on the inputs and save the output:</li>
-</ul><pre><code>annokey --genes genes.csv --terms terms.txt &gt; genes_out.csv
+<li>Run annokey on the inputs and save the output (replace <a href="mailto:user@example.com">user@example.com</a> with your real email address):</li>
+</ul><pre><code>annokey --genes genes.csv --terms terms.txt --online --email user@example.com &gt; genes_out.csv
 </code></pre>
 
 <h5>
 <a name="quick-start-offline-mode" class="anchor" href="#quick-start-offline-mode"><span class="octicon octicon-link"></span></a>Quick start offline mode</h5>
+
+<ul>
+<li>Populate the gene cache from the NCBI snapshot. See section 9 for how to do this.</li>
+<li>Run annokey on the inputs and save the output:</li>
+</ul><pre><code>annokey --genes genes.csv --terms terms.txt &gt; genes_out.csv
+</code></pre>
 
 <h1>
 <a name="4-installation" class="anchor" href="#4-installation"><span class="octicon octicon-link"></span></a>4. Installation</h1>
