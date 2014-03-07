@@ -174,9 +174,9 @@ BRCA1,1,DNA repair,408
 
 <ol>
 <li>Highest Rank: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
-<li>Highest Rank Term: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
-<li>Total Matched Entries: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
-</ol><p>Below is a screen shot of the search report generated for the example above.</p>
+<li>Highest Rank Term: this is the search-term corresponding to the highest ranked match. In the above example the highest ranked matching term is "DNA repair".</li>
+<li>Total Matched Entries: the sum of the number of database fields matched for every search term. For each search term we count the number of database fields where the term is matched, and then sum them for all terms. If two different terms match in the same field we still count them separately. This number gives you a crude measure of how closely related a given gene is to the entire collection of search terms.</li>
+</ol><p>Below is a screen shot of the search report generated for the example above. You can see that the report is much more detailed than the CSV annotations. The report is divided into genes. Each gene report contains a table showing all the matches for each search term. The rank of each matching search term is shown in the table, along with a list of database fields where the term matched, and the corresponding frequency of matches in those fields are shown in brackets.</p>
 
 <p><img src="https://raw.github.com/bjpop/annokey/master/images/annokey_screen.png" alt="Screen shot of Annokey's search result report"></p>
 
