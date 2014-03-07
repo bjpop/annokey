@@ -73,7 +73,9 @@
 <ul>
 <li>Summary annotations provide a quick overview of the relevance of a key phrase to a gene, and can be incorporated into a workflow using spreadsheets.</li>
 <li>The detailed report provides more information than the summary, and contains hyperlinks back to the online NCBI databases for easy reference.</li>
-</ul><h1>
+</ul><p><img src="https://raw.github.com/bjpop/annokey/master/images/annokey_screen.png" alt="Screen shot of Annokey's search result report"></p>
+
+<h1>
 <a name="5-inputs-and-outputs" class="anchor" href="#5-inputs-and-outputs"><span class="octicon octicon-link"></span></a>5. Inputs and Outputs</h1>
 
 <p>Annokey's main inputs are:</p>
@@ -105,23 +107,23 @@ breast cancer
 
 <p>the output CSV file produced by Annokey will look like this:</p>
 
-<pre><code>Gene,Highest Ranked Match,Matched Terms,Fields
-XRCC2,1,DNA repair;breast cancer,Process;GeneRIFs(8/33);Alternative Name
-PALB2,1,DNA repair;breast cancer,Process;GeneRIFs(37/78);GeneRIFs(2/78);PMID(2/192);Summary
-BRCA1,1,DNA repair;breast cancer,GeneRIFs(28/1275);Description;PMID(4/3698);Process;GeneRIFs(342/1275);Summary;Alternative Name;PMID(19/3698)
+<pre><code>Gene,Highest Rank,Highest Rank Term,Total Matched Entries
+XRCC2,1,DNA repair,11
+PALB2,1,DNA repair,48
+BRCA1,1,DNA repair,408
 </code></pre>
 
-<p>As you can see the output contains a lot of detail about each search term match. Consider the first case for XRCC2:</p>
+<p>Consider the first case, for XRCC2:</p>
 
-<pre><code>XRCC2,1,DNA repair;breast cancer,Process;GeneRIFs(8/33);Alternative Name
+<pre><code>XRCC2,1,DNA repair,11
 </code></pre>
 
 <p>In addition to the gene name, the output row contains three extra columns:</p>
 
 <ol>
-<li>Highest Ranked Match: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
-<li>Matched Terms: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
-<li>Fields: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
+<li>Highest Rank: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
+<li>Highest Rank Term: a list of all the search terms which matched this particular gene. In this case the terms "DNA repair" and "breast cancer" were found.</li>
+<li>Total Matched Entries: the locations in the NCBI gene entry where the search terms were found. In this case the search terms were found in "Process", "GeneRIFs(8/33)" and "Alternative Name".</li>
 </ol><h4>
 <a name="input-formatting-requirements" class="anchor" href="#input-formatting-requirements"><span class="octicon octicon-link"></span></a>Input formatting requirements</h4>
 
