@@ -55,7 +55,7 @@
 <ul>
 <li>Online search of the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
 <li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search and does not need a network connection. Cons: the cache data may be incomplete or out of date.</li>
-</ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described below) for automatically downloading this XML copy of the database.</p>
+</ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described in Section 8 below) for automatically downloading this XML copy of the database.</p>
 
 <h3>
 <a name="flexible-search-terms" class="anchor" href="#flexible-search-terms"><span class="octicon octicon-link"></span></a>Flexible search terms</h3>
@@ -306,8 +306,8 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 
 <p>Unfortunately there is no corresponding snapshot of the NCBI article summary database.</p>
 
-<h4>
-<a name="populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>Populating the gene cache with a complete download of NCBI gene</h4>
+<h1>
+<a name="8-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#8-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>8. Populating the gene cache with a complete download of NCBI gene</h1>
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
@@ -403,7 +403,7 @@ optional arguments:
 </code></pre>
 
 <h1>
-<a name="8-technical-details" class="anchor" href="#8-technical-details"><span class="octicon octicon-link"></span></a>8. Technical details</h1>
+<a name="9-technical-details" class="anchor" href="#9-technical-details"><span class="octicon octicon-link"></span></a>9. Technical details</h1>
 
 <h6>
 <a name="which-parts-of-ncbi-gene-and-pubmed-does-annokey-search" class="anchor" href="#which-parts-of-ncbi-gene-and-pubmed-does-annokey-search"><span class="octicon octicon-link"></span></a>Which parts of NCBI gene and PubMed does Annokey search?</h6>
