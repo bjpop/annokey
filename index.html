@@ -34,7 +34,7 @@
         <h1>
 <a name="1-introduction" class="anchor" href="#1-introduction"><span class="octicon octicon-link"></span></a>1. Introduction</h1>
 
-<p>Annokey is a command line tool for annotating gene lists with the results of a key term search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genes  by relevance to a domain of interest, such as "breast cancer" or "DNA repair" etc. The user steers the search by specifying a ranked list of keywords and terms that are likely to be highly correlated with their domain of interest.</p>
+<p>Annokey is a command line tool for annotating gene lists with the results of a key-term search of the <a href="http://www.ncbi.nlm.nih.gov/gene">NCBI Gene database</a> and linked <a href="http://www.ncbi.nlm.nih.gov/pubmed">PubMed</a> article abstracts. Its purpose is to help users prioritise genes  by relevance to a domain of interest, such as "breast cancer" or "DNA repair" <em>etcetera</em>. The user steers the search by specifying a ranked list of keywords and terms that are likely to be highly correlated with their domain of interest.</p>
 
 <h1>
 <a name="2-license" class="anchor" href="#2-license"><span class="octicon octicon-link"></span></a>2. License</h1>
@@ -49,24 +49,24 @@
 
 <p>Annokey's main features are:</p>
 
-<h6>
-<a name="online-and-offline-search" class="anchor" href="#online-and-offline-search"><span class="octicon octicon-link"></span></a>Online and offline search</h6>
+<h3>
+<a name="online-and-offline-search" class="anchor" href="#online-and-offline-search"><span class="octicon octicon-link"></span></a>Online and offline search</h3>
 
 <ul>
 <li>Online search of the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
 <li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search and does not need a network connection. Cons: the cache data may be incomplete or out of date.</li>
 </ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described below) for automatically downloading this XML copy of the database.</p>
 
-<h5>
-<a name="flexible-search-terms" class="anchor" href="#flexible-search-terms"><span class="octicon octicon-link"></span></a>Flexible search terms</h5>
+<h3>
+<a name="flexible-search-terms" class="anchor" href="#flexible-search-terms"><span class="octicon octicon-link"></span></a>Flexible search terms</h3>
 
 <p>Search terms can be specified as literal terms or as regular expressions.</p>
 
 <ul>
 <li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example due to issues with upper- and lower-case letters.</li>
 <li>Regular expressions are much more flexible than literal terms, but they require more expertise from the user.</li>
-</ul><h6>
-<a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h6>
+</ul><h3>
+<a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h3>
 
 <p>The search results are provided in summary form, as extra annotations to the input gene list, and also in a more detailed report, as a HTML document. Here is a <a href="http://www.berniepope.id.au/html/annokey_report.html">small example search report</a>.</p>
 
