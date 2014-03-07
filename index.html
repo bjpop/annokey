@@ -46,7 +46,8 @@
 
 <ul>
 <li>Install Annokey on your computer. See Section 4 below.</li>
-<li>Choose between online and offline mode (see Section 8 for more detail about the differences):
+<li>Prepare your two input files: 1) a CSV file with gene names specified in a column headed by <code>Gene</code>; 2) a text file containing one or more key-terms. See Section 6 for more details about the inputs.</li>
+<li>Choose between online and offline mode. See Section 8 for more detail about the differences.
 
 <ul>
 <li>Online mode is suitable for a relatively short number of genes  (&lt; 100).</li>
@@ -55,6 +56,11 @@
 </li>
 </ul><h5>
 <a name="quick-start-online-mode" class="anchor" href="#quick-start-online-mode"><span class="octicon octicon-link"></span></a>Quick start online mode</h5>
+
+<ul>
+<li>Run annokey on the inputs and save the output:</li>
+</ul><pre><code>annokey --genes genes.csv --terms terms.txt &gt; genes_out.csv
+</code></pre>
 
 <h5>
 <a name="quick-start-offline-mode" class="anchor" href="#quick-start-offline-mode"><span class="octicon octicon-link"></span></a>Quick start offline mode</h5>
@@ -209,8 +215,8 @@ s100,ABC,CHECK2,snp
 
 <p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, and a cache of the PubMed article summaries in <code>pubmedcache</code>, however you can specify an alternative locations via the <code>--genecache DIR</code> and <code>--pubmedcache DIR</code> command line arguments. The structure of the cache directories is discussed in the technical details section below.</p>
 
-<h3>
-<a name="how-to-use-annokey-from-the-command-line" class="anchor" href="#how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>How to use Annokey from the command line</h3>
+<h1>
+<a name="8-how-to-use-annokey-from-the-command-line" class="anchor" href="#8-how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>8. How to use Annokey from the command line</h1>
 
 <p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
 
@@ -322,7 +328,7 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 <p>Unfortunately there is no corresponding snapshot of the NCBI article summary database.</p>
 
 <h1>
-<a name="8-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#8-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>8. Populating the gene cache with a complete download of NCBI gene</h1>
+<a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
@@ -418,7 +424,7 @@ optional arguments:
 </code></pre>
 
 <h1>
-<a name="9-technical-details" class="anchor" href="#9-technical-details"><span class="octicon octicon-link"></span></a>9. Technical details</h1>
+<a name="10-technical-details" class="anchor" href="#10-technical-details"><span class="octicon octicon-link"></span></a>10. Technical details</h1>
 
 <h6>
 <a name="which-parts-of-ncbi-gene-and-pubmed-does-annokey-search" class="anchor" href="#which-parts-of-ncbi-gene-and-pubmed-does-annokey-search"><span class="octicon octicon-link"></span></a>Which parts of NCBI gene and PubMed does Annokey search?</h6>
