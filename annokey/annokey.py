@@ -106,11 +106,6 @@ def parse_args():
                              'defaults to {}'.format(DEFAULT_REPORT_FILE),
                         default=DEFAULT_REPORT_FILE)
 
-    parser.add_argument('--allmatches',
-                        help='Return all the matches of a search term in a '
-                             'database field, not just the first one',
-                        action='store_true')
-
     parser.add_argument('--pubmed',
                        help='Search titles and abstracts in Pubmed entries '
                             'referred to in each gene entry',
