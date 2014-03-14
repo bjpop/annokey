@@ -42,6 +42,7 @@ usage: annokey [-h] [--version] [--online] [--cachesnapshot FILE]
                [--organism ORGANISM] [--email EMAIL_ADDRESS] [--genecache DIR]
                [--pubmedcache DIR] [--terms FILE] [--genes FILE]
                [--log FILENAME] [--delimiter {comma,tab}] [--report FILENAME]
+               [--pubmed]
 
 Search NCBI for genes of interest, based on concept-keyword search.
 
@@ -69,3 +70,5 @@ optional arguments:
                         Delimiter for gene file.
   --report FILENAME     Save a detailed search report as HTML page, defaults
                         to annokey_report.html
+  --pubmed              Search titles and abstracts in Pubmed entries referred
+                        to in each gene entry
