@@ -366,20 +366,30 @@ optional arguments:
 <p>If Annokey cannot find a particular PubMed entry it will make a note in the logfile and continue searching. Therefore it is a good idea to check the logfile after each search to see whether anything was missed.</p>
 
 <h1>
-<a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
+<a name="9-ncbi-gene-snapshot" class="anchor" href="#9-ncbi-gene-snapshot"><span class="octicon octicon-link"></span></a>9. NCBI Gene snapshot</h1>
+
+<p>The following section explains how to create a local cache of the NCBI gene database for a particular organism using the database snapshots.</p>
 
 <h3>
-<a name="summary-of-steps" class="anchor" href="#summary-of-steps"><span class="octicon octicon-link"></span></a>Summary of steps:</h3>
+<a name="summary-of-steps" class="anchor" href="#summary-of-steps"><span class="octicon octicon-link"></span></a>Summary of steps.</h3>
+
+<p>The following two steps summarise how to download the snapshot and use it to populate a local cache. The example illustrates the default behaviour, which is to download the snapshot of the human database. Instructions for other organisms are given below.</p>
 
 <ul>
-<li>Download the latest snapshot:</li>
+<li>Download and unpack the latest snapshot. This step requires the command <code>linux.gene2xml</code> to be in your PATH, or you can specify a path to the command using the <code>--gene2xmlpath</code> option):</li>
 </ul><pre><code>get_ncbi_gene_snapshot_xml.py
 </code></pre>
 
+<p>The above command will download a copy of the snapshot in <code>ags.gz</code> format. It will convert that into an XML file, whose name will look something like <code>Homo_sapiens_N.xml</code>, where N is an encoding of the snapshot date, for instance <code>Homo_sapiens_20140314054717.xml</code>.</p>
+
 <ul>
-<li>Populate the local cache:</li>
-</ul><pre><code>annokey --terms terms.txt --genes genes.csv --xml Homo_sapiens_20140116041343.xml
+<li>Populate the local cache. This step will take a few minutes.</li>
+</ul><pre><code>annokey --xml Homo_sapiens_20140116041343.xml
 </code></pre>
+
+<p>This will create a directory called <code>genecache</code> under which the database entries are stored. See Section 10 for more details about the layout of the cache.</p>
+
+<p>After these two steps you are ready to use Annokey with the local cache.</p>
 
 <h3>
 <a name="more-details" class="anchor" href="#more-details"><span class="octicon octicon-link"></span></a>More details:</h3>
