@@ -403,10 +403,16 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
-<p>If you want to get a snapshot for another organism you must specify its FTP path with the <code>--filepath</code> command line argument. Currently all organisms are stored underneath <code>/gene/DATA/ASN_BINARY/</code> on the NCBI ftp site. For example, the following commands download and unpack the data for mouse:</p>
+<p>If you want to get a snapshot for another organism you must specify its FTP path with the <code>--filepath</code> command line argument. Currently all organisms are stored underneath <code>/gene/DATA/ASN_BINARY/</code> on the NCBI ftp site. For example, the following two commands download and unpack the data for mouse:</p>
+
+<p>Download the mouse snapshot and covert to XML:</p>
 
 <pre><code>get_ncbi_gene_snapshot_xml.py --filepath /gene/DATA/ASN_BINARY/Mammalia/Mus_musculus.ags.gz
-annokey --organism mouse --cachesnapshot Mus_musculus_20140314054725.xml
+</code></pre>
+
+<p>Unpack the mouse XML snapshot into its own local cache:</p>
+
+<pre><code>annokey --organism mouse --cachesnapshot Mus_musculus_20140314054725.xml
 </code></pre>
 
 <p>Note that you must specify the <code>--organism</code> for non-human data (otherwise Annokey will assume it is human). You can name the organism anything you like ("mouse" instead of "Mus musculous"), as long as you remember to use the same name when you run a search command.</p>
