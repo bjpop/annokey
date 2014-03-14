@@ -2,6 +2,8 @@
 
 Annokey is a command line tool for annotating gene lists with the results of a key-term search of the [NCBI Gene database](http://www.ncbi.nlm.nih.gov/gene) and linked [PubMed](http://www.ncbi.nlm.nih.gov/pubmed) article abstracts. Its purpose is to help users prioritise genes  by relevance to a domain of interest, such as "breast cancer" or "DNA repair" _etcetera_. The user steers the search by specifying a ranked list of keywords and terms that are likely to be highly correlated with their domain of interest.
 
+[Annokey website](http://bjpop.github.io/annokey)
+
 # 2. License
 
 Annokey is open source software, released under the [3-clause BSD license](https://github.com/bjpop/annokey/blob/master/LICENSE.txt).
