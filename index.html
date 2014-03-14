@@ -368,15 +368,23 @@ optional arguments:
 <h1>
 <a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
 
-<p>XXX Put this in here:</p>
+<h3>
+<a name="summary-of-steps" class="anchor" href="#summary-of-steps"><span class="octicon octicon-link"></span></a>Summary of steps:</h3>
 
-<h6>
-<a name="using-a-snapshot-of-the-ncbi-gene-database" class="anchor" href="#using-a-snapshot-of-the-ncbi-gene-database"><span class="octicon octicon-link"></span></a>Using a snapshot of the NCBI gene database</h6>
-
-<p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey. Details about how to obtain a snapshot of the database are provided below.</p>
-
-<pre><code>annokey --terms terms.txt --genes genes.csv --xml Homo_sapiens_20140116041343.xml
+<ul>
+<li>Download the latest snapshot:</li>
+</ul><pre><code>get_ncbi_gene_snapshot_xml.py
 </code></pre>
+
+<ul>
+<li>Populate the local cache:</li>
+</ul><pre><code>annokey --terms terms.txt --genes genes.csv --xml Homo_sapiens_20140116041343.xml
+</code></pre>
+
+<h3>
+<a name="more-details" class="anchor" href="#more-details"><span class="octicon octicon-link"></span></a>More details:</h3>
+
+<p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey.</p>
 
 <p>In the example above the snapshot is stored in the file called Homo_sapiens_20140116041343.xml. It stores a record for each gene in the human database.
 Annokey will process the XML file and populate the local gene database cache. Future searches can just use the cache directly, and will be substantially faster.</p>
@@ -385,10 +393,7 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
-<p>The process of downloading and converting the database snapshot is rather convoluted so we provide a command line tool called <code>get_ncbi_gene_snapshot_xml.py</code> to automate the process. It requires that you have a copy of the <code>gene2xml</code> program in your PATH. You can run the program like so:</p>
-
-<pre><code>get_ncbi_gene_snapshot_xml.py
-</code></pre>
+<p>The process of downloading and converting the database snapshot is rather convoluted so we provide a command line tool called <code>get_ncbi_gene_snapshot_xml.py</code> to automate the process. It requires that you have a copy of the <code>gene2xml</code> program in your PATH.</p>
 
 <p>the output will look like this:</p>
 
