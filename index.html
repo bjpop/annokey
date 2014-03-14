@@ -232,11 +232,12 @@ s100,ABC,CHECK2,snp
 <li>By searching in a locally cached copy of the data.</li>
 </ol><p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
 
-<p>Annokey treats the Gene cache and the PubMed cache differently for these reasons:
-1. PubMed is much larger than the Gene database. It is easy to download an entire copy of the Gene database, but less so for PubMed. Also PubMed has stricter licensing conditions than Gene.
-2. Existing PubMed database entries are unlikely to be modified, the opposite is true for existing Gene database entries.</p>
+<p>Annokey treats the Gene cache and the PubMed cache differently for these reasons:</p>
 
-<p>For these reasons Annokey allows you to populate a local cache with a copy of the entire Gene database for a given organism, but it does not allow you to do the same with PubMed. If you specify the "--pubmed" command line argument, Annokey will collect all the PubMed references made from each gene entry, and fetch all (and only) those PubMed articles directly from NCBI. However, it will keep a local cache of any previously requested PubMed articles and avoid downloading them again, to avoid the time delay introduced by the network request, and to reduce the load on the PubMed server.</p>
+<ol>
+<li>PubMed is much larger than the Gene database. It is easy to download an entire copy of the Gene database, but less so for PubMed. Also PubMed has stricter licensing conditions than Gene.</li>
+<li>Existing PubMed database entries are unlikely to be modified, the opposite is true for existing Gene database entries.</li>
+</ol><p>For these reasons Annokey allows you to populate a local cache with a copy of the entire Gene database for a given organism, but it does not allow you to do the same with PubMed. If you specify the "--pubmed" command line argument, Annokey will collect all the PubMed references made from each gene entry, and fetch all (and only) those PubMed articles directly from NCBI. However, it will keep a local cache of any previously requested PubMed articles and avoid downloading them again, to avoid the time delay introduced by the network request, and to reduce the load on the PubMed server.</p>
 
 <p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, and a cache of the PubMed article summaries in <code>pubmedcache</code>, however you can specify an alternative locations via the <code>--genecache DIR</code> and <code>--pubmedcache DIR</code> command line arguments. The structure of the cache directories is discussed in the technical details section below.</p>
 
