@@ -380,7 +380,7 @@ optional arguments:
 </ul><pre><code>get_ncbi_gene_snapshot_xml.py
 </code></pre>
 
-<p>The above command will download a copy of the snapshot in <code>ags.gz</code> format. It will convert that into an XML file, whose name will look something like <code>Homo_sapiens_N.xml</code>, where N is an encoding of the snapshot date, for instance <code>Homo_sapiens_20140314054717.xml</code>.</p>
+<p>The above command will download a copy of the snapshot in <code>ags.gz</code> format. It will convert that into an XML file, whose name will look something like <code>Homo_sapiens_N.xml</code>, where N is an encoding of the snapshot date, for instance <code>Homo_sapiens_20140314054717.xml</code>.  The XML file should be several gigabytes in size (it was 12 gigabytes on 14 March 2014).</p>
 
 <ul>
 <li>Populate the local cache. This step will take a few minutes.</li>
@@ -403,39 +403,13 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
-<p>The process of downloading and converting the database snapshot is rather convoluted so we provide a command line tool called <code>get_ncbi_gene_snapshot_xml.py</code> to automate the process. It requires that you have a copy of the <code>gene2xml</code> program in your PATH.</p>
+<p>If you want to get a snapshot for another organism you must specify its FTP path with the <code>--filepath</code> command line argument. Currently all organisms are stored underneath <code>/gene/DATA/ASN_BINARY/</code> on the NCBI ftp site. For example, the following commands download and unpack the data for mouse:</p>
 
-<p>the output will look like this:</p>
-
-<pre><code>Starts connecting to server (ftp.ncbi.nlm.nih.gov).
-  &gt;&gt; Connecting to server is successful.
-Starts getting the last modified time of data.
-  &gt;&gt; Getting the last modified time of data is successful.
-  &gt;&gt; The last modified time of the data at the server is 20140116041343
-Starts downloading data from server.
-  &gt;&gt; The file size is 160.39M
-  &gt;&gt; Downloading...        100.00% 
-  &gt;&gt; Downloading data is successful.
-  &gt;&gt; Homo_sapiens_20140116041343.ags.gz is stored.
-Starts converting Homo_sapiens_20140116041343.ags.gz to Homo_sapiens_20140116041343.xml.
-  &gt;&gt; Converting ...
-  &gt;&gt; Converting Homo_sapiens_20140116041343.ags.gz to Homo_sapiens_20140116041343.xml is successful.
-Done.
+<pre><code>get_ncbi_gene_snapshot_xml.py --filepath /gene/DATA/ASN_BINARY/Mammalia/Mus_musculus.ags.gz
+annokey --organism mouse --cachesnapshot Mus_musculus_20140314054725.xml
 </code></pre>
 
-<p>When it is complete you will have a file called <code>Homo_sapiens_N.xml</code> in your directory, where <code>N</code> is a number representing the date that the snapshot was taken. It should be several gigabytes in size (it was 12 gigabytes on 17 January 2014).</p>
-
-<p>If you have an up-to-date snapshot of the database in the current directory then <code>get_ncbi_gene_snapshot_xml.py</code> will not download a new version:</p>
-
-<pre><code>Starts connecting to server (ftp.ncbi.nlm.nih.gov).
-  &gt;&gt; Connecting to server is successful.
-Starts getting the last modified time of data.
-  &gt;&gt; Getting the last modified time of data is successful.
-  &gt;&gt; The last modified time of the data at the server is 20140116041343
-You already have the latest version of the file (Homo_sapiens_20140116041343.ags.gz).
-You already have the latest version of the xml file (Homo_sapiens_20140116041343.xml).
-Done.
-</code></pre>
+<p>Note that you must specify the <code>--organism</code> for non-human data (otherwise Annokey will assume it is human). You can name the organism anything you like ("mouse" instead of "Mus musculous"), as long as you remember to use the same name when you run a search command.</p>
 
 <p>The <code>get_ncbi_gene_snapshot_xml.py</code> program supports several command line arguments. You can view help information by running <code>get_ncbi_gene_snapshot_xml.py -h</code>:</p>
 
