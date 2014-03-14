@@ -117,7 +117,7 @@
 <p>Search terms can be specified as literal terms or as regular expressions.</p>
 
 <ul>
-<li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example due to issues with upper- and lower-case letters.</li>
+<li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example, issues with upper- and lower-case letters.</li>
 <li>Regular expressions are much more flexible than literal terms, but they require more expertise from the user.</li>
 </ul><h3>
 <a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h3>
@@ -133,17 +133,17 @@
 <p>Annokey's main inputs are:</p>
 
 <ol>
-<li>A CSV file representing a set of genes, one gene per row.</li>
+<li>A CSV file representing a set of genes, one gene per row. Rows may contain other arbitrary columns, but one column must contain the gene name.</li>
 <li>A list of search terms sorted in descending order of priority.</li>
 </ol><p>Annokey's main outputs are:</p>
 
 <ol>
 <li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given three extra columns summarising the search results. The extra columns are explained below in an example.</li>
-<li>A HTML report file showing more detailed search results for each gene. This includes hyperlinks back to the relevant entries in the NCBI website for easy follow-up investigation.</li>
+<li>A HTML report file showing more detailed search results for each gene. This includes hyperlinks back to the relevant entries in the NCBI website for easy follow-up investigation, plus detailed lists containing the context of each key-term match in each field.</li>
 </ol><h6>
 <a name="simple-example-of-inputs-and-outputs" class="anchor" href="#simple-example-of-inputs-and-outputs"><span class="octicon octicon-link"></span></a>Simple example of inputs and outputs</h6>
 
-<p>For example, if your input gene CSV file contains the following rows:</p>
+<p>For example, if your input gene CSV file contains the following rows (this is an intentionally simple example, real data will often contain more columns on each row):</p>
 
 <pre><code>Gene
 XRCC2
@@ -189,7 +189,7 @@ BRCA1,1,DNA repair,408
 <ul>
 <li>The file may be comma or tab separated. Annokey looks at the filename extension to guess what format is used (".csv" for comma separated files, ".tsv" for tab separated files) but you may override this with the <code>--delimiter {comma|tab}</code> command line argument.</li>
 <li>The first row in the file must be a header row.</li>
-<li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene".</li>
+<li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene". Annokey assumes that you will use the standard gene names that appear in the Gene database (<a href="http://www.ncbi.nlm.nih.gov/books/NBK3840/#genefaq.Nomenclature">NCBI gene database nomenclature</a>.</li>
 </ul><p>Here is an example valid gene file in comma separated format:</p>
 
 <pre><code>Sample,Study,Gene,Variant
@@ -206,9 +206,9 @@ s100,ABC,CHECK2,snp
 
 <ul>
 <li>Each search term must appear on a separate line.</li>
-<li>A search term may be either a literal phrase or a regular expression.</li>
-<li>Literal phrases may contain one or more words. Literal phrases are matched exactly by Annokey. For example "DNA" is considered to be different to "dna".</li>
-<li>Regular expressions must start with the word "regex" and then be followed by a valid Python regular expression. The <a href="http://docs.python.org/2/howto/regex.html">Python regular expression HOWTO</a> provides a good tutorial on the topic.</li>
+<li>A search term is a regular expression, using the Python regular expression syntax. The <a href="http://docs.python.org/2/howto/regex.html">Python regular expression HOWTO</a> provides a good tutorial on the topic.</li>
+<li>The simplest kind of regular expression is just a collection of one or more literal words, such as "breast cancer". This kind of term will match exactly the text in the term and nothing else. For example "DNA" will not match "dna" because they are not an exact match.</li>
+<li>More complex regular expressions can be used to make matching more flexible. For example "[Bb]reast [Cc]ancer" will match "Breast Cancer", "Breast cancer", "breast Cancer" and "breast cancer".</li>
 <li>Search terms are ranked based on their relative order in the file. The search term on line 1 has rank 1 and so on. Thus the most important search term appears on the first line of the file. The second most important term appears on the second line, and so forth.</li>
 </ul><p>A literal search term might look like this:</p>
 
@@ -217,7 +217,7 @@ s100,ABC,CHECK2,snp
 
 <p>A regular expression search term might look like this:</p>
 
-<pre><code>regex [Bb]reast [Cc]ancer(s)?
+<pre><code>[Bb]reast [Cc]ancer(s)?
 </code></pre>
 
 <p>This regular expression is more flexible because it will match with upper and lower case characters at the start of each word, and it also allows for an optional "s" at the end of the second word.</p>
