@@ -232,23 +232,24 @@ s100,ABC,CHECK2,snp
 <li>By searching in a locally cached copy of the data.</li>
 </ol><p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
 
-<p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, and a cache of the PubMed article summaries in <code>pubmedcache</code>, however you can specify an alternative locations via the <code>--genecache DIR</code> and <code>--pubmedcache DIR</code> command line arguments. The structure of the cache directories is discussed in the technical details section below.</p>
-
 <p>Annokey treats the Gene cache and the PubMed cache differently for these reasons:
 1. PubMed is much larger than the Gene database. It is easy to download an entire copy of the Gene database, but less so for PubMed. Also PubMed has stricter licensing conditions than Gene.
 2. Existing PubMed database entries are unlikely to be modified, the opposite is true for existing Gene database entries.</p>
 
 <p>For these reasons Annokey allows you to populate a local cache with a copy of the entire Gene database for a given organism, but it does not allow you to do the same with PubMed. If you specify the "--pubmed" command line argument, Annokey will collect all the PubMed references made from each gene entry, and fetch all (and only) those PubMed articles directly from NCBI. However, it will keep a local cache of any previously requested PubMed articles and avoid downloading them again, to avoid the time delay introduced by the network request, and to reduce the load on the PubMed server.</p>
 
+<p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, and a cache of the PubMed article summaries in <code>pubmedcache</code>, however you can specify an alternative locations via the <code>--genecache DIR</code> and <code>--pubmedcache DIR</code> command line arguments. The structure of the cache directories is discussed in the technical details section below.</p>
+
 <h1>
 <a name="8-how-to-use-annokey-from-the-command-line" class="anchor" href="#8-how-to-use-annokey-from-the-command-line"><span class="octicon octicon-link"></span></a>8. How to use Annokey from the command line</h1>
 
 <p>You can get help about the Annokey command line by using <code>annokey -h</code> (or <code>--help</code>), which will produce this output:</p>
 
-<pre><code>usage: annokey [-h] [--version] [--online] [--xml FILE] [--organism ORGANISM]
-               [--email EMAIL_ADDRESS] [--genecache DIR] [--pubmedcache DIR]
-               --terms FILE --genes FILE [--log FILENAME]
-               [--delimiter {comma,tab}] [--report FILENAME]
+<pre><code>usage: annokey [-h] [--version] [--online] [--cachesnapshot FILE]
+               [--organism ORGANISM] [--email EMAIL_ADDRESS] [--genecache DIR]
+               [--pubmedcache DIR] [--terms FILE] [--genes FILE]
+               [--log FILENAME] [--delimiter {comma,tab}] [--report FILENAME]
+               [--allmatches] [--pubmed]
 
 Search NCBI for genes of interest, based on concept-keyword search.
 
@@ -256,8 +257,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
   --online              Search gene information from online (NCBI).
-  --xml FILE            Populate gene information from downloaded XML dump of
-                        NCBI gene database
+  --cachesnapshot FILE  Populate the gene cache from downloaded XML snapshot
+                        of NCBI gene database
   --organism ORGANISM   Name of the organism to search
   --email EMAIL_ADDRESS
                         Your email address. This is required by NCBI for
@@ -276,6 +277,10 @@ optional arguments:
                         Delimiter for gene file.
   --report FILENAME     Save a detailed search report as HTML page, defaults
                         to annokey_report.html
+  --allmatches          Return all the matches of a search term in a database
+                        field, not just the first one
+  --pubmed              Search titles and abstracts in Pubmed entries referred
+                        to in each gene entry
 </code></pre>
 
 <h6>
@@ -297,6 +302,14 @@ optional arguments:
 </code></pre>
 
 <h6>
+<a name="search-report-file" class="anchor" href="#search-report-file"><span class="octicon octicon-link"></span></a>Search report file</h6>
+
+<p>Annokey saves a detailed search report in a HTML file. By default this file is called <code>annokey_report.html</code> but you can specify another name using the <code>--report</code> argument:</p>
+
+<pre><code>annokey --terms terms.txt --genes genes.csv --report mylogfile.txt
+</code></pre>
+
+<h6>
 <a name="log-file" class="anchor" href="#log-file"><span class="octicon octicon-link"></span></a>Log file</h6>
 
 <p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. For instance, the log file will record the names of any genes that it could not find in the local cache. By default the log file is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
@@ -313,10 +326,10 @@ optional arguments:
 
 <p>Alternatively, Annokey can be made to perform an online search with the <code>--online</code> argument. This argument also requires you to specify an email address (as per requirements of the NCBI Gene database):</p>
 
-<pre><code>annokey --online --email foo@bar.com --terms terms.txt --genes genes.csv
+<pre><code>annokey --online --email user@example.com --terms terms.txt --genes genes.csv
 </code></pre>
 
-<p>Obviously you should use a real email address instead of <code>foo@bar.com</code>.</p>
+<p>Obviously you should use a real email address instead of <code>user@example.com</code>.</p>
 
 <h6>
 <a name="organism" class="anchor" href="#organism"><span class="octicon octicon-link"></span></a>Organism</h6>
@@ -340,6 +353,16 @@ optional arguments:
 </code></pre>
 
 <h6>
+<a name="pubmed-article-search" class="anchor" href="#pubmed-article-search"><span class="octicon octicon-link"></span></a>PubMed article search</h6>
+
+<p>XXX</p>
+
+<h1>
+<a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
+
+<p>XXX Put this in here:</p>
+
+<h6>
 <a name="using-a-snapshot-of-the-ncbi-gene-database" class="anchor" href="#using-a-snapshot-of-the-ncbi-gene-database"><span class="octicon octicon-link"></span></a>Using a snapshot of the NCBI gene database</h6>
 
 <p>The NCBI provides a complete snapshot of the gene database which is updated regularly. Annokey can use this snapshot to automatically populate its local cache of the data. In many cases this is the most efficient way to use Annokey. Details about how to obtain a snapshot of the database are provided below.</p>
@@ -351,9 +374,6 @@ optional arguments:
 Annokey will process the XML file and populate the local gene database cache. Future searches can just use the cache directly, and will be substantially faster.</p>
 
 <p>Unfortunately there is no corresponding snapshot of the NCBI article summary database.</p>
-
-<h1>
-<a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
 
 <p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
 
