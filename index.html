@@ -304,7 +304,7 @@ optional arguments:
 
 <p>Annokey saves a detailed search report in a HTML file. By default this file is called <code>annokey_report.html</code> but you can specify another name using the <code>--report</code> argument:</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.csv --report mylogfile.txt
+<pre><code>annokey --report mylogfile.txt --terms terms.txt --genes genes.csv 
 </code></pre>
 
 <h6>
@@ -312,7 +312,7 @@ optional arguments:
 
 <p>As a side-effect, Annokey will produce a log file which contains useful information about the progress of the search. For instance, the log file will record the names of any genes that it could not find in the local cache. By default the log file is written to the file <code>annokey_log.txt</code>, but you can override that with the <code>--log</code> argument:</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.csv --log mylogfile.txt
+<pre><code>annokey --log mylogfile.txt --terms terms.txt --genes genes.csv 
 </code></pre>
 
 <p>The log file also records the command line that was used to execute the program. This can come in handy if you want to run the same command again, but you forgot what the arguments were.</p>
@@ -342,18 +342,27 @@ optional arguments:
 
 <p>Multiple columns in the genes input file can be separated by either commas (so-called CSV format) or tabs (so-called TSV format). If the filename ends in ".csv" then Annokey will assume that the file is in CSV format. If the filename ends in ".tsv" then Annokey will assume that the file is in TSV format. However, you can override this behaviour by specifying the desired format using the <code>--delimiter</code> command line argument. The value of <code>--delimiter</code> can be either <code>comma</code> or <code>tab</code>, for example:</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.txt --delimiter comma
+<pre><code>annokey --delimiter comma --terms terms.txt --genes genes.txt 
 </code></pre>
 
 <p>or</p>
 
-<pre><code>annokey --terms terms.txt --genes genes.txt --delimiter tab
+<pre><code>annokey --delimiter tab --terms terms.txt --genes genes.txt 
 </code></pre>
 
 <h6>
 <a name="pubmed-article-search" class="anchor" href="#pubmed-article-search"><span class="octicon octicon-link"></span></a>PubMed article search</h6>
 
-<p>XXX</p>
+<p>Each Gene database entry contains zero or more links to related PubMed articles which are somehow closely related to the given gene. Annokey will search for key terms in the linked Pubmed article titles and summaries if you specify the <code>--pubmed</code> flag:</p>
+
+<pre><code>annokey --pubmed --email user@example.com --terms terms.txt --genes genes.txt
+</code></pre>
+
+<p>Annokey may need to request PubMed articles from the online database, so you must also specify your email address whenever you use the <code>--pubmed</code> flag. Obviously you should use your real email address instead of the example <code>user@example.com</code>.</p>
+
+<p>To reduce the number of network requests to the PubMed online databse Annokey caches each PubMed entry. Future searches of the same article will find it in the cache. This improves the speed of the search and also reduces network traffic.</p>
+
+<p>If Annokey cannot find a particular PubMed entry it will make a note in the logfile and continue searching. Therefore it is a good idea to check the logfile after each search to see whether anything was missed.</p>
 
 <h1>
 <a name="9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene" class="anchor" href="#9-populating-the-gene-cache-with-a-complete-download-of-ncbi-gene"><span class="octicon octicon-link"></span></a>9. Populating the gene cache with a complete download of NCBI gene</h1>
