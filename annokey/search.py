@@ -69,7 +69,8 @@ def summarise_hits(all_hits):
         all_ranks.append(rank_term)
         for _, matches in fields.items():
             for match in matches:
-                num_matches += len(match.spans)
+                #num_matches += len(match.spans)
+                num_matches += 1
 
     if len(all_ranks) > 0:
         highest_rank, highest_rank_term = sorted(all_ranks)[0]
