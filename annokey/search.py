@@ -37,7 +37,11 @@ def aggregate_hits(hits):
             term_fields = term_dict[(rank, term)]
             if field in term_fields:
                 term_field_matches = term_fields[field]
-                term_field_matches.append(match)
+                if field == 'Conserved Domains':
+                    if match not in term_field_matches:
+                        term_field_matches.append(match)
+                else:
+                    term_field_matches.append(match)
             else:
                 term_fields[field] = [match]
         else:
@@ -211,6 +215,15 @@ class TermMatch(object):
     def __init__(self, context, spans):
         self.context = context # string that was searched in
         self.spans = spans
+
+    def __str__(self):
+        return self.context
+
+    def __repr__(self):
+        return str(self)
+
+    def __eq__(self, other):
+        return self.context == other.context
 
 
 def parse_search_term(string):
