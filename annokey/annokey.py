@@ -157,6 +157,7 @@ def main():
     logging.info('hostname: {}'.format(hostname))
     logging.info('working directory: {}'.format(working_directory))
     logging.info('command line: {}'.format(command_line_text))
+    logging.info('organism: {}'.format(args.organism))
 
     if not ((args.terms and args.genes) or args.cachesnapshot):
         print('\nERROR: Annokey requires --terms AND --genes OR '
