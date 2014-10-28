@@ -2,9 +2,9 @@
 <html>
 
   <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Annokey : Gene-based search for key-terms in the NCBI gene database and associated PubMed abstracts" />
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Annokey : Gene-based search for key-terms in the NCBI gene database and associated PubMed abstracts">
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -56,12 +56,16 @@
 <li>Offline mode is suitable for relatively large number of genes (&gt;= 100) or in cases where you plan to do lots of searches.</li>
 </ul>
 </li>
-</ul><h5>
+</ul>
+
+<h5>
 <a name="quick-start-online-mode" class="anchor" href="#quick-start-online-mode"><span class="octicon octicon-link"></span></a>Quick start online mode</h5>
 
 <ul>
 <li>Run annokey on the inputs and save the output (replace <code>user@example.com</code> with your real email address):</li>
-</ul><pre><code>annokey --genes genes.csv --terms terms.txt --online --email user@example.com &gt; genes_out.csv
+</ul>
+
+<pre><code>annokey --genes genes.csv --terms terms.txt --online --email user@example.com &gt; genes_out.csv
 </code></pre>
 
 <h5>
@@ -70,7 +74,9 @@
 <ul>
 <li>Populate the gene cache from the NCBI snapshot. See section 9 for how to do this.</li>
 <li>Run annokey on the inputs and save the output:</li>
-</ul><pre><code>annokey --genes genes.csv --terms terms.txt &gt; genes_out.csv
+</ul>
+
+<pre><code>annokey --genes genes.csv --terms terms.txt &gt; genes_out.csv
 </code></pre>
 
 <h5>
@@ -111,7 +117,9 @@
 <ul>
 <li>Online search of the NCBI databases directly over a network connection. Pros: you get the latest up-to-date information. Cons: retrieving lots of data over the network can be relatively slow.</li>
 <li>Offline search utilises Annokey's local cache of the NCBI databases. Pros: searching the local cache is much faster than online search and does not need a network connection. Cons: the cache data may be incomplete or out of date.</li>
-</ul><p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described in Section 9 below) for automatically downloading this XML copy of the database.</p>
+</ul>
+
+<p>The NCBI provides an entire copy of the gene database in XML format at <a href="ftp.ncbi.nlm.nih.gov">ftp.ncbi.nlm.nih.gov</a>. Annokey can use this XML file to automatically populate its local cache. We also provide a tool called <code>get_ncbi_gene_snapshot_xml.py</code> (described in Section 9 below) for automatically downloading this XML copy of the database.</p>
 
 <h3>
 <a name="flexible-search-terms" class="anchor" href="#flexible-search-terms"><span class="octicon octicon-link"></span></a>Flexible search terms</h3>
@@ -121,7 +129,9 @@
 <ul>
 <li>Literal terms are easy to use but an exact match must be found in the database. Sometimes exact match is too restrictive, for example, issues with upper- and lower-case letters.</li>
 <li>Regular expressions are much more flexible than literal terms, but they require more expertise from the user.</li>
-</ul><h3>
+</ul>
+
+<h3>
 <a name="search-results-reported-in-summary-and-detailed-form" class="anchor" href="#search-results-reported-in-summary-and-detailed-form"><span class="octicon octicon-link"></span></a>Search results reported in summary and detailed form</h3>
 
 <p>The search results are provided in summary form, as extra annotations to the input gene list, and also in a more detailed report, as a HTML document. An example report is shown in Section 6.</p>
@@ -129,7 +139,9 @@
 <ul>
 <li>Summary annotations provide a quick overview of the relevance of a key phrase to a gene, and can be incorporated into a workflow using spreadsheets.</li>
 <li>The detailed report provides more information than the summary, and contains hyperlinks back to the online NCBI databases for easy reference.</li>
-</ul><h1>
+</ul>
+
+<h1>
 <a name="6-inputs-and-outputs" class="anchor" href="#6-inputs-and-outputs"><span class="octicon octicon-link"></span></a>6. Inputs and outputs</h1>
 
 <p>Annokey's main inputs are:</p>
@@ -137,12 +149,16 @@
 <ol>
 <li>A CSV file representing a set of genes, one gene per row. Rows may contain other arbitrary columns, but one column must contain the gene name.</li>
 <li>A list of search terms sorted in descending order of priority.</li>
-</ol><p>Annokey's main outputs are:</p>
+</ol>
+
+<p>Annokey's main outputs are:</p>
 
 <ol>
 <li>A CSV file representing an annotated version of the input CSV file. Each row of the CSV file (representing a given gene) is given three extra columns summarising the search results. The extra columns are explained below in an example.</li>
 <li>A HTML report file showing more detailed search results for each gene. This includes hyperlinks back to the relevant entries in the NCBI website for easy follow-up investigation, plus detailed lists containing the context of each key-term match in each field.</li>
-</ol><h6>
+</ol>
+
+<h6>
 <a name="simple-example-of-inputs-and-outputs" class="anchor" href="#simple-example-of-inputs-and-outputs"><span class="octicon octicon-link"></span></a>Simple example of inputs and outputs</h6>
 
 <p>For example, if your input gene CSV file contains the following rows (this is an intentionally simple example, real data will often contain more columns on each row):</p>
@@ -178,7 +194,9 @@ BRCA1,1,DNA repair,408
 <li>Highest Rank: the rank of the highest-ranked search term which was found in the search. In this case the rank is 1, which corresponds to the rank of the search term "DNA repair". Search terms are ranked according to their order in the search terms file. The term on the first line is highest ranked (most important), followed by the second line, and so on.</li>
 <li>Highest Rank Term: this is the search-term corresponding to the highest ranked match. In the above example the highest ranked matching term is "DNA repair".</li>
 <li>Total Matched Entries: the sum of the number of database fields matched for every search term. For each search term we count the number of database fields where the term is matched, and then sum them for all terms. If two different terms match in the same field we still count them separately. This number gives you a crude measure of how closely related a given gene is to the entire collection of search terms.</li>
-</ol><p>Below is a screen shot of the search report generated for the example above. You can see that the report is much more detailed than the CSV annotations. The report is divided into genes. Each gene report contains a table showing all the matches for each search term. The rank of each matching search term is shown in the table, along with a list of database fields where the term matched, and the corresponding frequency of matches in those fields are shown in brackets.</p>
+</ol>
+
+<p>Below is a screen shot of the search report generated for the example above. You can see that the report is much more detailed than the CSV annotations. The report is divided into genes. Each gene report contains a table showing all the matches for each search term. The rank of each matching search term is shown in the table, along with a list of database fields where the term matched, and the corresponding frequency of matches in those fields are shown in brackets.</p>
 
 <p><img src="https://raw.github.com/bjpop/annokey/master/images/annokey_screen.png" alt="Screen shot of Annokey's search result report"></p>
 
@@ -192,7 +210,9 @@ BRCA1,1,DNA repair,408
 <li>The file may be comma or tab separated. Annokey looks at the filename extension to guess what format is used (".csv" for comma separated files, ".tsv" for tab separated files) but you may override this with the <code>--delimiter {comma|tab}</code> command line argument.</li>
 <li>The first row in the file must be a header row.</li>
 <li>Each row may have one or more columns. One of the columns must contain the gene name, and the header for that row must be "Gene". Annokey assumes that you will use the standard gene names that appear in the Gene database (<a href="http://www.ncbi.nlm.nih.gov/books/NBK3840/#genefaq.Nomenclature">NCBI gene database nomenclature</a>.</li>
-</ul><p>Here is an example valid gene file in comma separated format:</p>
+</ul>
+
+<p>Here is an example valid gene file in comma separated format:</p>
 
 <pre><code>Sample,Study,Gene,Variant
 s100,XYZ,BRCA1,snp
@@ -212,7 +232,9 @@ s100,ABC,CHECK2,snp
 <li>The simplest kind of regular expression is just a collection of one or more literal words, such as "breast cancer". This kind of term will match exactly the text in the term and nothing else. For example "DNA" will not match "dna" because they are not an exact match.</li>
 <li>More complex regular expressions can be used to make matching more flexible. For example "[Bb]reast [Cc]ancer" will match "Breast Cancer", "Breast cancer", "breast Cancer" and "breast cancer".</li>
 <li>Search terms are ranked based on their relative order in the file. The search term on line 1 has rank 1 and so on. Thus the most important search term appears on the first line of the file. The second most important term appears on the second line, and so forth.</li>
-</ul><p>A literal search term might look like this:</p>
+</ul>
+
+<p>A literal search term might look like this:</p>
 
 <pre><code>breast cancer
 </code></pre>
@@ -232,14 +254,18 @@ s100,ABC,CHECK2,snp
 <ol>
 <li>By sending queries to the online database via the <a href="http://en.wikipedia.org/wiki/Entrez">Entrez</a> programming interface.</li>
 <li>By searching in a locally cached copy of the data.</li>
-</ol><p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
+</ol>
+
+<p>Online queries give you access to the most up-to-date version of the database, but at the cost of being much slower, and requiring an internet connection. The offline version searches in a local copy of the database stored on your computer. Offline search is potentially much faster than online search and does not need an internet access. However, your local copy of the database may not necessarily contain the most up-to-date data.</p>
 
 <p>Annokey treats the Gene cache and the PubMed cache differently for these reasons:</p>
 
 <ol>
 <li>PubMed is much larger than the Gene database. It is easy to download an entire copy of the Gene database, but less so for PubMed. Also PubMed has stricter licensing conditions than Gene.</li>
 <li>Existing PubMed database entries are unlikely to be modified, the opposite is true for existing Gene database entries.</li>
-</ol><p>For these reasons Annokey allows you to populate a local cache with a copy of the entire Gene database for a given organism, but it does not allow you to do the same with PubMed. If you specify the <code>--pubmed</code> command line argument, Annokey will collect all the PubMed references made from each gene entry, and fetch all (and only) those PubMed articles directly from NCBI. However, it will keep a local cache of any previously requested PubMed articles, and fetch them from the cache if they are ever requested again in the future. This avoids the time delay introduced by the network request, and reduces the load on the PubMed server. We recommend that you do not use the PubMed search on large numbers of genes (&gt;=100) because the cost of requesting large numbers of PubMed articles can greatly slow down the search process.</p>
+</ol>
+
+<p>For these reasons Annokey allows you to populate a local cache with a copy of the entire Gene database for a given organism, but it does not allow you to do the same with PubMed. If you specify the <code>--pubmed</code> command line argument, Annokey will collect all the PubMed references made from each gene entry, and fetch all (and only) those PubMed articles directly from NCBI. However, it will keep a local cache of any previously requested PubMed articles, and fetch them from the cache if they are ever requested again in the future. This avoids the time delay introduced by the network request, and reduces the load on the PubMed server. We recommend that you do not use the PubMed search on large numbers of genes (&gt;=100) because the cost of requesting large numbers of PubMed articles can greatly slow down the search process.</p>
 
 <p>By default Annokey keeps its cache of the NCBI Gene Database in a directory called <code>genecache</code>, and a cache of the PubMed article summaries in <code>pubmedcache</code>, however you can specify an alternative locations via the <code>--genecache DIR</code> and <code>--pubmedcache DIR</code> command line arguments. The structure of the cache directories is discussed in the technical details section below.</p>
 
@@ -379,14 +405,18 @@ optional arguments:
 
 <ul>
 <li>Download and unpack the latest snapshot. This step requires the command <code>linux.gene2xml</code> to be in your PATH, or you can specify a path to the command using the <code>--gene2xmlpath</code> option):</li>
-</ul><pre><code>get_ncbi_gene_snapshot_xml.py
+</ul>
+
+<pre><code>get_ncbi_gene_snapshot_xml.py
 </code></pre>
 
 <p>The above command will download a copy of the snapshot in <code>ags.gz</code> format. It will convert that into an XML file, whose name will look something like <code>Homo_sapiens_N.xml</code>, where N is an encoding of the snapshot date, for instance <code>Homo_sapiens_20140314054717.xml</code>.  The XML file should be several gigabytes in size (it was 12 gigabytes on 14 March 2014).</p>
 
 <ul>
 <li>Populate the local cache. This step will take a few minutes.</li>
-</ul><pre><code>annokey --xml Homo_sapiens_20140116041343.xml
+</ul>
+
+<pre><code>annokey --cachesnapshot Homo_sapiens_20140116041343.xml
 </code></pre>
 
 <p>This will create a directory called <code>genecache</code> under which the database entries are stored. See Section 10 for more details about the layout of the cache.</p>
@@ -405,7 +435,7 @@ Annokey will process the XML file and populate the local gene database cache. Fu
 
 <p>Unfortunately there is no corresponding snapshot of the NCBI article summary database.</p>
 
-<p>Snapshots of the NCBI gene database for different organisms are provided on the <a>NCBI ftp site</a>. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called <a>gene2xml</a>.</p>
+<p>Snapshots of the NCBI gene database for different organisms are provided on the NCBI ftp site. The snapshot is stored in a compressed binary format which can be converted to XML using a tool called gene2xml.</p>
 
 <p>If you want to get a snapshot for another organism you must specify its FTP path with the <code>--filepath</code> command line argument. Currently all organisms are stored underneath <code>/gene/DATA/ASN_BINARY/</code> on the NCBI ftp site. For example, the following two commands download and unpack the data for mouse:</p>
 
