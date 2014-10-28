@@ -4,7 +4,7 @@ from distutils.core import setup
 
 setup(
     name='annokey',
-    version='1.0.1',
+    version='1.0.2',
     author='Bernie Pope',
     author_email='bjpope@unimelb.edu.au',
     packages=['annokey'],
